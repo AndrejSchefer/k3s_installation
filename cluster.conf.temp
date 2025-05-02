@@ -1,0 +1,19 @@
+
+# Define variables
+MASTER_IP=""
+SSH_USER_MASTER=""
+SSH_PASS_MASTER=""
+K3S_TOKEN_FILE="master-node-token"
+
+WORKER_IP=""
+SSH_USER_WORKER=""
+SSH_PASS_WORKER=""
+
+NFS_SERVER="10.0.0.10"
+NFS_EXPORT="/mnt/k3s-nfs-localstorage"
+NFS_MOUNTPOINT="/mnt/nfs-igneos-cloud-k3s"
+CAPACITY="100Gi"
+
+EMAIL="email@example.de"   # Change to your email
+DOMAIN="demo.example.com"   # Change to your domain
+CLUSTER_ISSUER_NAME="letsencrypt-prod"

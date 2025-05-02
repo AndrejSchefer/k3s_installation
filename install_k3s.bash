@@ -14,23 +14,14 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Define variables
-
-MASTER_IP="192.168.0.1"
-SSH_USER_MASTER="USER"
-SSH_PASS_MASTER="PASSWORD"
-K3S_TOKEN_FILE="master-node-token"
-WORKER_IP="192.168.0.2"
-SSH_USER_WORKER="kubernetes"
-SSH_PASS_WORKER="PASSWORD"
-NFS_SERVER="10.0.0.10"
-NFS_EXPORT="/mnt/k3s-nfs-localstorage"
-NFS_MOUNTPOINT="/mnt/nfs-igneos-cloud-k3s"
-CAPACITY="100Gi"
-
-EMAIL="email@examapl.de"   # Change to your email
-DOMAIN="demo.example.com"   # Change to your domain
-CLUSTER_ISSUER_NAME="letsencrypt-prod"
+# Lade Konfiguration
+CONFIG_FILE="./cluster.conf"
+if [[ -f "$CONFIG_FILE" ]]; then
+  source "$CONFIG_FILE"
+else
+  echo "[ERROR] Konfigurationsdatei $CONFIG_FILE nicht gefunden!"
+  exit 1
+fi
 
 # Print success message
 print_success() {
@@ -327,7 +318,38 @@ EOF
   print_success "Cluster vollständig konfiguriert (cert-manager, ClusterIssuer, PersistentVolume)."
 }
 
+# uninstall_k3s_node: Deinstalliert k3s (server oder agent) auf einem Host
+uninstall_k3s_node() {
+  local host="$1"
+  print_info "Starte Deinstallation von k3s auf $host..."
 
+  remote_exec "$host" "
+    echo '[INFO] Stoppe k3s-Dienste, falls aktiv'
+    systemctl stop k3s || true
+    systemctl stop k3s-agent || true
+
+    echo '[INFO] Führe Deinstallationsscript aus, falls vorhanden'
+    if [ -f /usr/local/bin/k3s-uninstall.sh ]; then
+      /usr/local/bin/k3s-uninstall.sh
+    fi
+
+    if [ -f /usr/local/bin/k3s-agent-uninstall.sh ]; then
+      /usr/local/bin/k3s-agent-uninstall.sh
+    fi
+
+    echo '[INFO] Entferne verbleibende Datenverzeichnisse'
+    rm -rf /etc/rancher /var/lib/rancher /var/lib/kubelet /etc/cni /opt/cni /var/lib/containerd
+
+    echo '[INFO] K3s-Dienste vollständig entfernt auf $host'
+  "
+
+  if [[ $? -eq 0 ]]; then
+    print_success "k3s wurde erfolgreich von $host deinstalliert."
+  else
+    print_error "Fehler bei der Deinstallation von k3s auf $host"
+    exit 1
+  fi
+}
 
 
 # Main program
@@ -335,11 +357,13 @@ main() {
   print_info "Welcome to the k3s cluster setup!"
   print_info "Please select an action:"
 
-  echo -e "${YELLOW}1) Remote Install k3s Master${NC}"
-  echo -e "${YELLOW}2) Remote Install k3s Worker${NC}"
+  echo -e "${YELLOW}1) Install k3s Master${NC}"
+  echo -e "${YELLOW}2) Install k3s Worker${NC}"
   echo -e "${YELLOW}3) Create a NFS mount on worker${NC}"
   echo -e "${YELLOW}4) Create a NFS PV${NC}"
   echo -e "${YELLOW}5) Install Cert Manager ${NC}"
+  echo -e "${YELLOW}6) Install full K3s-Cluser  ${NC}"
+  echo -e "${YELLOW}99) Deinstall k3s FULL Cluster${NC}"
   echo -e "${YELLOW}0) Exit${NC}"
 
   read -rp "$(echo -e "${YELLOW}Enter your choice: ${NC}")" CHOICE
@@ -360,10 +384,22 @@ main() {
     5)
       install_cert_menager "$WORKER_IP"
       ;;
+    6)
+      install_k3s_master_remote "$MASTER_IP"
+      install_k3s_worker_remote "$WORKER_IP"
+      mount_nfs_remote "$WORKER_IP"
+      create_nfs_pv "$WORKER_IP"
+      install_cert_menager "$WORKER_IP"
+      ;;
     0)
       print_info "Exiting."
       exit 0
       ;;
+    99)
+      uninstall_k3s_node "$MASTER_IP"
+      uninstall_k3s_node "$WORKER_IP"
+      ;;
+
     *)
       print_error "Invalid choice! Please enter a valid number."
       ;;
