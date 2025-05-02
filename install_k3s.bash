@@ -3,9 +3,6 @@ set -euo pipefail  # Exit on errors, unset vars and failed pipes
 
 #####################################
 # Secure k3s Cluster Installer (Enhanced)
-# Master: 37.120.167.64
-# Worker: 193.31.28.86
-# Run as root!
 #####################################
 
 # Define color codes
