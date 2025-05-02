@@ -28,7 +28,7 @@ NFS_EXPORT="/mnt/k3s-nfs-localstorage"
 NFS_MOUNTPOINT="/mnt/nfs-igneos-cloud-k3s"
 CAPACITY="100Gi"
 
-EMAIL="email@andrejschefer.de"   # Change to your email
+EMAIL="email@examapl.de"   # Change to your email
 DOMAIN="demo.example.com"   # Change to your domain
 CLUSTER_ISSUER_NAME="letsencrypt-prod"
 
