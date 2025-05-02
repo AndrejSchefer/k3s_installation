@@ -20,11 +20,9 @@ MASTER_IP="192.168.0.1"
 SSH_USER_MASTER="USER"
 SSH_PASS_MASTER="PASSWORD"
 K3S_TOKEN_FILE="master-node-token"
-
 WORKER_IP="192.168.0.2"
 SSH_USER_WORKER="kubernetes"
 SSH_PASS_WORKER="PASSWORD"
-
 NFS_SERVER="10.0.0.10"
 NFS_EXPORT="/mnt/k3s-nfs-localstorage"
 NFS_MOUNTPOINT="/mnt/nfs-igneos-cloud-k3s"
