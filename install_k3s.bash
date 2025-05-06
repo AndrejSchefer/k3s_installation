@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 set -euo pipefail  # Exit on errors, unset vars and failed pipes
 
 #####################################
@@ -70,6 +70,26 @@ remote_exec() {
     exit $status
   fi
 }
+
+# remote_exec leitet jetzt STDIN an den Remote-bash weiter
+remote_exec_for_yaml() {
+  local host="$1"; shift
+  local user pass
+
+  if [[ "$host" == "$MASTER_IP" ]]; then
+    user="$SSH_USER_MASTER"; pass="$SSH_PASS_MASTER"
+  elif [[ "$host" == "$WORKER_IP" ]]; then
+    user="$SSH_USER_WORKER"; pass="$SSH_PASS_WORKER"
+  else
+    print_error "Unbekannter Host: $host"; return 1
+  fi
+
+  # Everything after 'sudo -S' goes to bash -s, script folgt via STDIN
+  sshpass -p "$pass" ssh -tt -o StrictHostKeyChecking=no "$user@$host" \
+    "echo '$pass' | sudo -S bash -euo pipefail -s" "$@"       # ← wichtig: -s
+}
+
+
 # remote_exec_output: Führt Befehl aus und gibt stdout als Rückgabewert zurück
 remote_exec_output() {
   local host="$1"; shift
@@ -88,6 +108,27 @@ remote_exec_output() {
 
   sshpass -p "$pass" ssh -o StrictHostKeyChecking=no "$user@$host" \
     "echo '$pass' | sudo -S bash -euo pipefail -c \"$*\"" 2>/dev/null
+}
+
+# remote_exec: führt Befehl auf dem Zielhost mit sudo-Passwortübergabe aus
+remote_exec_with_root() {
+  local host="$1"; shift
+
+  local user pass
+  if [[ "$host" == "$MASTER_IP" ]]; then
+    user="$SSH_USER_MASTER"
+    pass="$SSH_PASS_MASTER"
+  elif [[ "$host" == "$WORKER_IP" ]]; then
+    user="$SSH_USER_WORKER"
+    pass="$SSH_PASS_WORKER"
+  else
+    print_error "Unbekannter Host: $host"
+    return 1
+  fi
+
+  # SSH: führe Befehl direkt aus, Pipe an sudo, keine doppelte Bash-Schachtelung!
+  sshpass -p "$pass" ssh -tt -o StrictHostKeyChecking=no "$user@$host" \
+  "echo \"$pass\" | sudo -S bash -euo pipefail"
 }
 
 # Function: Install k3s Master
@@ -315,6 +356,197 @@ EOF
   print_success "Cluster vollständig konfiguriert (cert-manager, ClusterIssuer, PersistentVolume)."
 }
 
+########################################
+# Erstellt den Namespace für den NFS Provisioner
+create_nfs_namespace() {
+
+  cat >"nfs-namespace.yaml" <<YAML
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: nfs-provisioner
+YAML
+
+  # Datei auf den Master kopieren
+  sshpass -p "$SSH_PASS_MASTER" \
+    scp -o StrictHostKeyChecking=no "nfs-namespace.yaml" \
+    "$SSH_USER_MASTER@$MASTER_IP:/tmp/nfs-namespace.yaml"
+
+  # Remote anwenden
+  remote_exec "$MASTER_IP" "kubectl apply -f /tmp/nfs-namespace.yaml"
+}
+
+########################################
+# Erstellt die ServiceAccount-, ClusterRole-, ...
+create_nfs_rbac() {
+    cat >"nfs-rbac.yaml" <<YAML
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: nfs-client-provisioner
+  namespace: nfs-provisioner
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: nfs-client-provisioner-runner
+rules:
+  - apiGroups: ['']
+    resources: ['nodes']
+    verbs: ['get', 'list', 'watch']
+  - apiGroups: ['']
+    resources: ['persistentvolumes']
+    verbs: ['get', 'list', 'watch', 'create', 'delete']
+  - apiGroups: ['']
+    resources: ['persistentvolumeclaims']
+    verbs: ['get', 'list', 'watch', 'update']
+  - apiGroups: ['storage.k8s.io']
+    resources: ['storageclasses']
+    verbs: ['get', 'list', 'watch']
+  - apiGroups: ['']
+    resources: ['events']
+    verbs: ['create', 'update', 'patch']
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: run-nfs-client-provisioner
+subjects:
+  - kind: ServiceAccount
+    name: nfs-client-provisioner
+    namespace: nfs-provisioner
+roleRef:
+  kind: ClusterRole
+  name: nfs-client-provisioner-runner
+  apiGroup: rbac.authorization.k8s.io
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: leader-locking-nfs-client-provisioner
+  namespace: nfs-provisioner
+rules:
+  - apiGroups: ['']
+    resources: ['endpoints']
+    verbs: ['get', 'list', 'watch', 'create', 'update', 'patch']
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: leader-locking-nfs-client-provisioner
+  namespace: nfs-provisioner
+subjects:
+  - kind: ServiceAccount
+    name: nfs-client-provisioner
+    namespace: nfs-provisioner
+roleRef:
+  kind: Role
+  name: leader-locking-nfs-client-provisioner
+  apiGroup: rbac.authorization.k8s.io
+YAML
+
+  # Datei auf den Master kopieren
+  sshpass -p "$SSH_PASS_MASTER" \
+    scp -o StrictHostKeyChecking=no "nfs-rbac.yaml" \
+    "$SSH_USER_MASTER@$MASTER_IP:/tmp/nfs-rbac.yaml"
+
+  # Remote anwenden
+  remote_exec "$MASTER_IP" "kubectl apply -f /tmp/nfs-rbac.yaml"
+  remote_exec "$MASTER_IP" "rm /tmp/nfs-rbac.yaml"
+}
+
+########################################
+# Erstellt die Deployment-Ressource
+create_nfs_deployment() {
+    cat >"nfs-deployment.yaml" <<YAML
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nfs-client-provisioner
+  namespace: nfs-provisioner
+  labels:
+    app: nfs-client-provisioner
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: nfs-client-provisioner
+  template:
+    metadata:
+      labels:
+        app: nfs-client-provisioner
+    spec:
+      serviceAccountName: nfs-client-provisioner
+      containers:
+        - name: nfs-client-provisioner
+          image: registry.k8s.io/sig-storage/nfs-subdir-external-provisioner:v4.0.2
+          volumeMounts:
+            - name: nfs-client-root
+              mountPath: /persistentvolumes
+          env:
+            - name: PROVISIONER_NAME
+              value: k8s-sigs.io/nfs-subdir-external-provisioner
+            - name: NFS_SERVER
+              value: ${NFS_SERVER}
+            - name: NFS_PATH
+              value: ${NFS_EXPORT}
+      volumes:
+        - name: nfs-client-root
+          nfs:
+            server: ${NFS_SERVER}
+            path: ${NFS_EXPORT}
+YAML
+
+  # Datei auf den Master kopieren
+  sshpass -p "$SSH_PASS_MASTER" \
+    scp -o StrictHostKeyChecking=no "nfs-deployment.yaml" \
+    "$SSH_USER_MASTER@$MASTER_IP:/tmp/nfs-deployment.yaml"
+
+  # Remote anwenden
+  remote_exec "$MASTER_IP" "kubectl apply -f /tmp/nfs-deployment.yaml"
+  remote_exec "$MASTER_IP" "rm /tmp/nfs-deployment.yaml"
+}
+
+########################################
+# Erstellt die StorageClass
+create_nfs_storageclass() {
+cat >"nfs-sc.yaml" <<'YAML'
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: nfs-client
+provisioner: k8s-sigs.io/nfs-subdir-external-provisioner
+parameters:
+  pathPattern: "${.PVC.namespace}/${.PVC.name}"
+  onDelete: delete
+reclaimPolicy: Delete
+volumeBindingMode: Immediate
+YAML
+
+  # Datei auf den Master kopieren
+  sshpass -p "$SSH_PASS_MASTER" \
+    scp -o StrictHostKeyChecking=no "nfs-sc.yaml" \
+    "$SSH_USER_MASTER@$MASTER_IP:/tmp/nfs-sc.yaml"
+
+  # Remote anwenden
+  remote_exec "$MASTER_IP" "kubectl apply -f /tmp/nfs-sc.yaml"
+  remote_exec "$MASTER_IP" "rm /tmp/nfs-sc.yaml"
+}
+
+
+# Führt die Installation des NFS Subdir External Provisioners durch
+install_nfs_subdir_external_provisioner() {
+  print_info "Starte Installation des NFS Subdir External Provisioners auf dem Master (${MASTER_IP})..."
+  create_nfs_namespace
+  create_nfs_deployment
+  create_nfs_rbac
+  create_nfs_storageclass
+  print_success "NFS Subdir External Provisioner erfolgreich installiert."
+}
+
+
 # uninstall_k3s_node: Deinstalliert k3s (server oder agent) auf einem Host
 uninstall_k3s_node() {
   local host="$1"
@@ -360,6 +592,7 @@ main() {
   echo -e "${YELLOW}4) Create a NFS PV${NC}"
   echo -e "${YELLOW}5) Install Cert Manager ${NC}"
   echo -e "${YELLOW}6) Install full K3s-Cluser  ${NC}"
+  echo -e "${YELLOW}7) Install NFS PV  ${NC}"
   echo -e "${YELLOW}99) Deinstall k3s FULL Cluster${NC}"
   echo -e "${YELLOW}0) Exit${NC}"
 
@@ -387,6 +620,9 @@ main() {
       mount_nfs_remote "$WORKER_IP"
       create_nfs_pv "$WORKER_IP"
       install_cert_menager "$WORKER_IP"
+      ;;
+    7)
+      install_nfs_subdir_external_provisioner "$WORKER_IP"
       ;;
     0)
       print_info "Exiting."
