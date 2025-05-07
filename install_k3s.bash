@@ -268,38 +268,47 @@ remote_exec_with_root() {
   "echo \"$pass\" | sudo -S bash -euo pipefail"
 }
 
+# Konfiguriert den NFS-Server: Exportverzeichnis, /etc/exports, Berechtigungen
 mount_nfs_remote() {
   local host="$1"
-  print_info "Mounting NFS on worker node $host (mit sudo-Passwort)"
+  print_info "Konfiguriere NFS-Server auf $host (Export: $NFS_EXPORT)"
 
-  remote_exec_with_root "$host" "
-  echo '[INFO] Erstelle Mountpoint: ${NFS_MOUNTPOINT}'
-  mkdir -p ${NFS_MOUNTPOINT} || exit 1
+  remote_exec "$host" "
+    echo '[INFO] Installiere nfs-kernel-server, falls nicht vorhanden'
+    if ! dpkg -s nfs-kernel-server >/dev/null 2>&1; then
+      apt-get update && apt-get install -y nfs-kernel-server
+    else
+      echo '[INFO] nfs-kernel-server ist bereits installiert'
+    fi
 
-  echo '[INFO] Versuche NFS-Mount: ${NFS_SERVER}:${NFS_EXPORT}'
-  if mount -t nfs ${NFS_SERVER}:${NFS_EXPORT} ${NFS_MOUNTPOINT}; then
-    echo '[SUCCESS] NFS erfolgreich gemountet'
-  else
-    echo '[ERROR] NFS konnte nicht gemountet werden' >&2
-    exit 1
-  fi
+    echo '[INFO] Erstelle Exportverzeichnis: ${NFS_EXPORT}'
+    mkdir -p '${NFS_EXPORT}'
+    chown nobody:nogroup '${NFS_EXPORT}'
+    chmod 777 '${NFS_EXPORT}'
 
-  if grep -qs '${NFS_MOUNTPOINT}' /etc/fstab; then
-    echo '[INFO] NFS bereits in /etc/fstab'
-  else
-    echo '${NFS_SERVER}:${NFS_EXPORT} ${NFS_MOUNTPOINT} nfs defaults 0 0' >> /etc/fstab
-    echo '[SUCCESS] NFS in /etc/fstab eingetragen'
-  fi
+    echo '[INFO] Prüfe /etc/exports auf vorhandene Einträge'
+    if grep -qs '${NFS_EXPORT}' /etc/exports; then
+      echo '[INFO] Export ist bereits in /etc/exports eingetragen'
+    else
+      echo '${NFS_EXPORT} ${NFS_SERVER}/24(rw,sync,no_subtree_check,no_root_squash)' >> /etc/exports
+      echo '[SUCCESS] Export zu /etc/exports hinzugefügt'
+    fi
+
+    echo '[INFO] Lade NFS-Exports neu'
+    exportfs -ra
+    exportfs -v
+
+    echo '[SUCCESS] NFS-Server auf $host ist bereit'
   "
 
-
   if [[ $? -eq 0 ]]; then
-    print_success "NFS auf $host erfolgreich gemountet und konfiguriert"
+    print_success "NFS-Export auf $host erfolgreich eingerichtet"
   else
-    print_error "Fehler beim NFS-Mount auf $host"
+    print_error "Fehler beim Einrichten des NFS-Exports auf $host"
     exit 1
   fi
 }
+
 
 
 # Function: Create NFS PersistentVolume
@@ -324,7 +333,9 @@ EOF
   print_success "NFS PersistentVolume created"
 }
 
-install_cert_menager() {
+
+# Install Cert Manager
+install_cert_manager() {
   print_info "Post-Konfiguration des Clusters auf dem Master ($MASTER_IP) wird durchgeführt..."
 
   remote_exec_with_root "$MASTER_IP" "
@@ -619,7 +630,7 @@ main() {
       install_k3s_worker_remote "$WORKER_IP"
       mount_nfs_remote "$WORKER_IP"
       create_nfs_pv "$WORKER_IP"
-      install_cert_menager "$WORKER_IP"
+      install_cert_manager "$WORKER_IP"
       ;;
     7)
       install_nfs_subdir_external_provisioner "$WORKER_IP"

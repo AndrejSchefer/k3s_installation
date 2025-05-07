@@ -11,7 +11,6 @@ SSH_PASS_WORKER=""
 
 NFS_SERVER="10.0.0.10"
 NFS_EXPORT="/mnt/k3s-nfs-localstorage"
-NFS_MOUNTPOINT="/mnt/nfs-igneos-cloud-k3s"
 CAPACITY="100Gi"
 
 EMAIL="email@example.de"   # Change to your email
