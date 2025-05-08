@@ -338,12 +338,21 @@ EOF
 install_cert_manager() {
   print_info "Post-Konfiguration des Clusters auf dem Master ($MASTER_IP) wird durchgeführt..."
 
+
+  # Datei auf den Master kopieren
+  sshpass -p "$SSH_PASS_MASTER" \
+    scp -o StrictHostKeyChecking=no "cert-manager/cert-manager.yaml" \
+    "$SSH_USER_MASTER@$MASTER_IP:/tmp/cert-manager.yaml"
+
+  # Remote anwenden
+  remote_exec "$MASTER_IP" "kubectl apply -f /tmp/cert-manager.yaml"
+  remote_exec "$MASTER_IP" "rm /tmp/cert-manager.yaml"
+
   remote_exec_with_root "$MASTER_IP" "
     echo '[INFO] Installing cert-manager...'
-    kubectl apply --validate=false -f https://github.com/cert-manager/cert-manager/releases/download/v1.15.3/cert-manager.yaml || exit 1
 
     echo '[INFO] Waiting for cert-manager-webhook to become ready...'
-    kubectl -n cert-manager rollout status deployment cert-manager-webhook --timeout=90s || exit 1
+  ##  kubectl -n cert-manager rollout status deployment cert-manager-webhook --timeout=90s || exit 1
 
     echo '[INFO] Creating ClusterIssuer...'
     cat <<EOF | kubectl apply -f -
@@ -363,6 +372,8 @@ spec:
           class: traefik
 EOF
   "
+
+  # kubectl apply --validate=false -f https://github.com/cert-manager/cert-manager/releases/download/v1.15.3/cert-manager.yaml || exit 1
 
   print_success "Cluster vollständig konfiguriert (cert-manager, ClusterIssuer, PersistentVolume)."
 }
@@ -554,6 +565,7 @@ install_nfs_subdir_external_provisioner() {
   create_nfs_deployment
   create_nfs_rbac
   create_nfs_storageclass
+  rm nfs-*.yaml
   print_success "NFS Subdir External Provisioner erfolgreich installiert."
 }
 
@@ -623,7 +635,8 @@ main() {
       create_nfs_pv "$WORKER_IP"
       ;;
     5)
-      install_cert_menager "$WORKER_IP"
+      install_cert_manager "$WORKER_IP"
+      # install_cert_menager "$WORKER_IP"
       ;;
     6)
       install_k3s_master_remote "$MASTER_IP"
