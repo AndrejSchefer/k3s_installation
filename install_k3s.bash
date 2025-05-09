@@ -43,7 +43,6 @@ check_root() {
   fi
 }
 
-# remote_exec: Executes a command on the target host with credentials
 # remote_exec: Executes a command on the target host with visible live output and clean exit
 remote_exec() {
   local host="$1"; shift

@@ -1,3 +1,5 @@
 cluster.conf
 master*
 __*
+config.json
+*.log
