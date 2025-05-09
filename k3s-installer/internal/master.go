@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 	"os/user"
+	"path/filepath"
 	"strings"
 
 	"github.com/pkg/sftp"
@@ -22,27 +23,53 @@ func InstallK3sMaster() error {
 
 	fmt.Println("Master Nodes:")
 	for _, master := range cfg.Masters {
-		user := master.SSHUser
-		password := master.SSHPass
-		domain := cfg.Domain
+		fmt.Printf("  Installiere K3s auf %s (%s@%s)...\n", master.IP, master.SSHUser, master.IP)
 
-		// Befehl mit sudo -S und Passwortübergabe
-		command := fmt.Sprintf(`echo '%s' | sudo -S bash -c '
-curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode=644 --secrets-encryption --tls-san=%s" sh -s - server &&
-mkdir -p /home/%s/.kube &&
-cp /etc/rancher/k3s/k3s.yaml /home/%s/.kube/config &&
-chown %s:%s /home/%s/.kube/config &&
-chmod 600 /home/%s/.kube/config &&
-SERVER_IP=$(hostname -I | awk "{print $1}") &&
-sed -i "s/127\\.0\\.0\\.1/$SERVER_IP/" /home/%s/.kube/config
-'`, password, domain, user, user, user, user, user, user, user)
-		// Execute the command on the remote server
-		err := remote.RemoteExec(master.SSHUser, master.SSHPass, master.IP, command)
+		// Sichere Übergabe des Passworts
+		//		auth := fmt.Sprintf("%s:%s", master.SSHUser, master.SSHPass)
+
+		installCommand := `curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode=644 --secrets-encryption --tls-san=%s" sh -s - server`
+		kubeconfigDir := filepath.Join("/home", master.SSHUser, ".kube")
+		kubeconfigFile := filepath.Join(kubeconfigDir, "config")
+		copyKubeconfigCommand := fmt.Sprintf(`mkdir -p "%s" && cp /etc/rancher/k3s/k3s.yaml "%s" && chown %s:%s "%s" && chmod 600 "%s"`,
+			kubeconfigDir, kubeconfigFile, master.SSHUser, master.SSHUser, kubeconfigFile, kubeconfigFile)
+		getServerIPCommand := `hostname -I | awk '{print $1}'`
+		updateKubeconfigCommand := fmt.Sprintf(`SERVER_IP=$(%s) && sed -i "s/127\\.0\\.0\\.1/$SERVER_IP/" "%s"`, getServerIPCommand, kubeconfigFile)
+		combinedCommand := fmt.Sprintf(`%s && %s && %s`,
+			fmt.Sprintf(installCommand, cfg.Domain),
+			copyKubeconfigCommand,
+			updateKubeconfigCommand,
+		)
+
+		//		err := remote.RemoteExecWithAuth(master.IP, auth, combinedCommand)
+		err := remote.RemoteExec(master.SSHUser, master.SSHPass, master.IP, combinedCommand)
+
 		if err != nil {
-			return fmt.Errorf("Erro Remote-Server: %v", err)
+			return fmt.Errorf("Fehler bei der Ausführung des Befehls auf %s: %v", master.IP, err)
 		}
 
-		fmt.Printf("  %s (%s, %s)\n", master.IP, master.SSHUser, master.SSHPass)
+		fmt.Printf("  K3s erfolgreich installiert auf %s\n", master.IP)
+		/*user := master.SSHUser
+				password := master.SSHPass
+				domain := cfg.Domain
+
+				// Befehl mit sudo -S und Passwortübergabe
+				command := fmt.Sprintf(`echo '%s' | sudo -S bash -c '
+		curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode=644 --secrets-encryption --tls-san=%s" sh -s - server &&
+		mkdir -p /home/%s/.kube &&
+		cp /etc/rancher/k3s/k3s.yaml /home/%s/.kube/config &&
+		chown %s:%s /home/%s/.kube/config &&
+		chmod 600 /home/%s/.kube/config &&
+		SERVER_IP=$(hostname -I | awk "{print $1}") &&
+		sed -i "s/127\\.0\\.0\\.1/$SERVER_IP/" /home/%s/.kube/config
+		'`, password, domain, user, user, user, user, user, user, user)
+				// Execute the command on the remote server
+				err := remote.RemoteExec(master.SSHUser, master.SSHPass, master.IP, command)
+				if err != nil {
+					return fmt.Errorf("Erro Remote-Server: %v", err)
+				}
+
+				fmt.Printf("  %s (%s, %s)\n", master.IP, master.SSHUser, master.SSHPass)*/
 	}
 
 	fetchK3sToken(cfg.Masters[0].IP, cfg.Masters[0].SSHUser, cfg.Masters[0].SSHPass, cfg.K3sTokenFile)
