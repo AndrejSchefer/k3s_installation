@@ -18,39 +18,50 @@ import (
 func InstallK3sMaster() error {
 	cfg, err := config.LoadConfig("config.json")
 	if err != nil {
-		log.Fatalf("Fehler beim Laden der Konfiguration: %v", err)
+		log.Fatalf("Error loading configuration: %v", err)
 	}
 
-	fmt.Println("Master Nodes:")
+	fmt.Println("[INFO] Starting K3s master installation...")
+
 	for _, master := range cfg.Masters {
-		fmt.Printf("  Installiere K3s auf %s (%s@%s)...\n", master.IP, master.SSHUser, master.IP)
-
-		fmt.Printf("  K3s erfolgreich installiert auf %s\n", master.IP)
 		user := master.SSHUser
-		password := master.SSHPass
-		domain := cfg.Domain
+		pass := master.SSHPass
+		ip := master.IP
+		tlsDomain := cfg.Domain
 
-		// Befehl mit sudo -S und Passwortübergabe
-		command := fmt.Sprintf(`echo '%s' | sudo -S bash -c '
+		fmt.Printf("[STEP] Installing K3s on %s (%s@%s)\n", ip, user, ip)
+
+		// Remote installation script with proper IP substitution
+		cmd := fmt.Sprintf(`echo '%s' | sudo -S bash -c '
 		curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode=644 --secrets-encryption --tls-san=%s" sh -s - server &&
 		mkdir -p /home/%s/.kube &&
 		cp /etc/rancher/k3s/k3s.yaml /home/%s/.kube/config &&
 		chown %s:%s /home/%s/.kube/config &&
 		chmod 600 /home/%s/.kube/config &&
-		SERVER_IP=$(hostname -I | awk "{print $1}") &&
+		SERVER_IP=$(hostname -I | awk "{print \$1}") &&
 		sed -i "s/127\\.0\\.0\\.1/$SERVER_IP/" /home/%s/.kube/config
-		'`, password, domain, user, user, user, user, user, user, user)
+		'`, pass, tlsDomain, user, user, user, user, user, user, user)
 
-		// Execute the command on the remote server
-		err := remote.RemoteExec(master.SSHUser, master.SSHPass, master.IP, command)
-		if err != nil {
-			return fmt.Errorf("Erro Remote-Server: %v", err)
+		if err := remote.RemoteExec(user, pass, ip, cmd); err != nil {
+			return fmt.Errorf("failed to install K3s on %s: %w", ip, err)
 		}
 
+		fmt.Printf("[OK] K3s installed successfully on %s\n", ip)
 	}
 
-	fetchK3sToken(cfg.Masters[0].IP, cfg.Masters[0].SSHUser, cfg.Masters[0].SSHPass, cfg.K3sTokenFile)
-	fetchKubeconfigLocal(cfg.Masters[0].IP, cfg.Masters[0].SSHUser, cfg.Masters[0].SSHPass)
+	// Fetch the token and kubeconfig from the first master
+	master := cfg.Masters[0]
+	fmt.Println("[STEP] Fetching node token and kubeconfig...")
+
+	if err := fetchK3sToken(master.IP, master.SSHUser, master.SSHPass, cfg.K3sTokenFile); err != nil {
+		return fmt.Errorf("failed to fetch node-token: %w", err)
+	}
+
+	if err := fetchKubeconfigLocal(master.IP, master.SSHUser, master.SSHPass); err != nil {
+		return fmt.Errorf("failed to fetch kubeconfig: %w", err)
+	}
+
+	fmt.Println("[SUCCESS] K3s master installation complete.")
 	return nil
 }
 

@@ -9,63 +9,66 @@ import (
 	"igneos.cloud/kubernetes/k3s-installer/remote"
 )
 
-// MountNFS lädt die Konfiguration und richtet NFS auf allen Workern ein
+// ANSI color codes
+const (
+	colorReset  = "\033[0m"
+	colorRed    = "\033[31m"
+	colorGreen  = "\033[32m"
+	colorYellow = "\033[33m"
+	colorBlue   = "\033[34m"
+)
+
+// MountNFS reads the configuration and configures NFS export on the specified NFS server
 func MountNFS() {
 	cfg, err := config.LoadConfig("config.json")
 	if err != nil {
-		log.Fatalf("Fehler beim Laden der Konfiguration: %v", err)
+		log.Fatalf(colorRed+"[ERROR] Failed to load configuration: %v"+colorReset, err)
 	}
 
-	exportPath := "/home/kubernetes/ic-k3s-nfs"
-	//exportCIDR := fmt.Sprintf("%s/24", cfg.Workers[0].IP)
+	nfsIP := cfg.NFS.NFS_Server
+	nfsUser := cfg.NFS.NFS_User
+	nfsPass := cfg.NFS.NFS_Pass
+	exportPath := cfg.NFS.Export
 
-	for _, worker := range cfg.Workers {
-		fmt.Printf("[INFO] Konfiguriere NFS-Server auf %s (Export: %s)\n", worker.IP, exportPath)
+	fmt.Printf(colorBlue+"[INFO] Configuring NFS export on server %s (Export path: %s)\n"+colorReset, nfsIP, exportPath)
 
-		// Shell-Skript vorbereiten
-		script := fmt.Sprintf(`
-		echo '[INFO] Installiere nfs-kernel-server, falls nicht vorhanden'
-		if ! dpkg -s nfs-kernel-server >/dev/null 2>&1; then
-		apt-get update && apt-get install -y nfs-kernel-server
-		else
-		echo '[INFO] nfs-kernel-server ist bereits installiert'
-		fi
+	// Shell script to set up NFS export
+	script := fmt.Sprintf(`
+	echo '%[4]s[INFO]%[5]s Installing nfs-kernel-server if not already present'
+	if ! dpkg -s nfs-kernel-server >/dev/null 2>&1; then apt-get update && apt-get install -y nfs-kernel-server
+	else echo '%[4]s[INFO]%[5]s nfs-kernel-server is already installed'; fi
 
-		echo '[INFO] Erstelle Exportverzeichnis: %[1]s'
-		mkdir -p '%[1]s'
-		chown nobody:nogroup '%[1]s'
-		chmod 777 '%[1]s'
+	echo '%[4]s[INFO]%[5]s Creating export directory: %[1]s'
+	mkdir -p '%[1]s' && chown nobody:nogroup '%[1]s' && chmod 777 '%[1]s'
 
-		echo '[INFO] Prüfe /etc/exports auf vorhandene Einträge'
-		if grep -qs '%[1]s' /etc/exports; then
-		echo '[INFO] Export ist bereits in /etc/exports eingetragen'
-		else
-		echo '%[1]s %[2]s(rw,sync,no_subtree_check,no_root_squash)' >> /etc/exports
-		echo '[SUCCESS] Export zu /etc/exports hinzugefügt'
-		fi
+	echo '%[4]s[INFO]%[5]s Checking /etc/exports for existing entries'
+	if grep -qs '%[1]s' /etc/exports; then
+	echo '%[4]s[INFO]%[5]s Export already exists in /etc/exports'
+	else
+	echo '%[1]s %[2]s(rw,sync,no_subtree_check,no_root_squash)' >> /etc/exports
+	echo '%[3]s[SUCCESS]%[5]s Export added to /etc/exports'
+	fi
 
-		echo '----------------------------------------------------------------'
-		echo '[INFO] Lade NFS-Exports neu'
-		exportfs -ra
-		exportfs -v
+	echo '%[4]s[INFO]%[5]s Reloading NFS exports'
+	exportfs -ra && exportfs -v
 
-		echo '[SUCCESS] NFS-Server auf %[3]s ist bereit'
-    `, exportPath, worker.IP, worker.IP)
+	echo '%[3]s[SUCCESS]%[5]s NFS export is ready on %[2]s'
+	`, exportPath, nfsIP, colorGreen, colorBlue, colorReset)
 
-		// Befehl mit Passwort vorbereiten
-		fullCommand := fmt.Sprintf("echo '%s' | sudo -S bash -c \"%s\"",
-			worker.SSHPass, escapeForDoubleQuotes(script))
+	// Prepare remote command
+	fullCommand := fmt.Sprintf("echo '%s' | sudo -S bash -c \"%s\"",
+		nfsPass, escapeForDoubleQuotes(script))
 
-		err := remote.RemoteExec(worker.SSHUser, worker.SSHPass, worker.IP, fullCommand)
-		if err != nil {
-			log.Printf("[FEHLER] NFS-Export auf %s fehlgeschlagen: %v\n", worker.IP, err)
-		} else {
-			fmt.Printf("[OK] NFS-Export auf %s erfolgreich eingerichtet\n", worker.IP)
-		}
+	// Execute remotely
+	err = remote.RemoteExec(nfsUser, nfsPass, nfsIP, fullCommand)
+	if err != nil {
+		log.Printf(colorRed+"[ERROR] Failed to configure NFS export on %s: %v"+colorReset, nfsIP, err)
+	} else {
+		fmt.Printf(colorGreen+"[OK] NFS export successfully configured on %s\n"+colorReset, nfsIP)
 	}
 }
 
-// escapeForDoubleQuotes escaped doppelte Anführungszeichen für bash -c
+// escapeForDoubleQuotes escapes all double quotes for bash -c execution
 func escapeForDoubleQuotes(input string) string {
 	return strings.ReplaceAll(input, `"`, `\"`)
 }

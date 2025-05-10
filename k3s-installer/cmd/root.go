@@ -29,7 +29,7 @@ func showMenu() {
 		"Create a NFS PV",
 		"Install Cert Manager",
 		"Install full K3s-Cluster",
-		"Install NFS PV",
+		"Install NFS Provisioner",
 		"Uninstall k3s FULL Cluster",
 		"Exit",
 	}
@@ -61,8 +61,8 @@ func showMenu() {
 		installCertManager()
 	case "Install full K3s-Cluster":
 		installFullCluster()
-	case "Install NFS PV":
-		installNFSPVProvisioner()
+	case "Install NFS Provisioner":
+		internal.InstallNFSSubdirExternalProvisioner()
 	case "Uninstall k3s FULL Cluster":
 		uninstallFullCluster()
 	case "Exit":
@@ -82,10 +82,6 @@ func installCertManager() {
 
 func installFullCluster() {
 	fmt.Println("Installing full K3s Cluster...")
-}
-
-func installNFSPVProvisioner() {
-	fmt.Println("Installing NFS PV Provisioner...")
 }
 
 func uninstallFullCluster() {

@@ -9,9 +9,12 @@ type NodeConfig struct {
 
 // NFSConfig represents NFS settings
 type NFSConfig struct {
-	Server   string `json:"server"`
-	Export   string `json:"export"`
-	Capacity string `json:"capacity"`
+	NFS_Server string `json:"nfs_server"`
+	NFS_User   string `json:"nfs_user"`
+	NFS_Pass   string `json:"nfs_pass"`
+	Server     string `json:"server"`
+	Export     string `json:"export"`
+	Capacity   string `json:"capacity"`
 }
 
 // AppConfig represents the entire configuration
