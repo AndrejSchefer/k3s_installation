@@ -52,7 +52,7 @@ func showMenu() {
 	case "Install k3s Master":
 		internal.InstallK3sMaster()
 	case "Install k3s Worker":
-		installK3sWorker()
+		internal.InstallK3sWorker()
 	case "Create a NFS mount on worker":
 		mountNFS()
 	case "Create a NFS PV":

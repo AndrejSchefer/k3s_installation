@@ -6,8 +6,8 @@ import (
 	"log"
 	"os"
 	"os/user"
-	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
@@ -25,36 +25,13 @@ func InstallK3sMaster() error {
 	for _, master := range cfg.Masters {
 		fmt.Printf("  Installiere K3s auf %s (%s@%s)...\n", master.IP, master.SSHUser, master.IP)
 
-		// Sichere Übergabe des Passworts
-		//		auth := fmt.Sprintf("%s:%s", master.SSHUser, master.SSHPass)
-
-		installCommand := `curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode=644 --secrets-encryption --tls-san=%s" sh -s - server`
-		kubeconfigDir := filepath.Join("/home", master.SSHUser, ".kube")
-		kubeconfigFile := filepath.Join(kubeconfigDir, "config")
-		copyKubeconfigCommand := fmt.Sprintf(`mkdir -p "%s" && cp /etc/rancher/k3s/k3s.yaml "%s" && chown %s:%s "%s" && chmod 600 "%s"`,
-			kubeconfigDir, kubeconfigFile, master.SSHUser, master.SSHUser, kubeconfigFile, kubeconfigFile)
-		getServerIPCommand := `hostname -I | awk '{print $1}'`
-		updateKubeconfigCommand := fmt.Sprintf(`SERVER_IP=$(%s) && sed -i "s/127\\.0\\.0\\.1/$SERVER_IP/" "%s"`, getServerIPCommand, kubeconfigFile)
-		combinedCommand := fmt.Sprintf(`%s && %s && %s`,
-			fmt.Sprintf(installCommand, cfg.Domain),
-			copyKubeconfigCommand,
-			updateKubeconfigCommand,
-		)
-
-		//		err := remote.RemoteExecWithAuth(master.IP, auth, combinedCommand)
-		err := remote.RemoteExec(master.SSHUser, master.SSHPass, master.IP, combinedCommand)
-
-		if err != nil {
-			return fmt.Errorf("Fehler bei der Ausführung des Befehls auf %s: %v", master.IP, err)
-		}
-
 		fmt.Printf("  K3s erfolgreich installiert auf %s\n", master.IP)
-		/*user := master.SSHUser
-				password := master.SSHPass
-				domain := cfg.Domain
+		user := master.SSHUser
+		password := master.SSHPass
+		domain := cfg.Domain
 
-				// Befehl mit sudo -S und Passwortübergabe
-				command := fmt.Sprintf(`echo '%s' | sudo -S bash -c '
+		// Befehl mit sudo -S und Passwortübergabe
+		command := fmt.Sprintf(`echo '%s' | sudo -S bash -c '
 		curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode=644 --secrets-encryption --tls-san=%s" sh -s - server &&
 		mkdir -p /home/%s/.kube &&
 		cp /etc/rancher/k3s/k3s.yaml /home/%s/.kube/config &&
@@ -63,13 +40,13 @@ func InstallK3sMaster() error {
 		SERVER_IP=$(hostname -I | awk "{print $1}") &&
 		sed -i "s/127\\.0\\.0\\.1/$SERVER_IP/" /home/%s/.kube/config
 		'`, password, domain, user, user, user, user, user, user, user)
-				// Execute the command on the remote server
-				err := remote.RemoteExec(master.SSHUser, master.SSHPass, master.IP, command)
-				if err != nil {
-					return fmt.Errorf("Erro Remote-Server: %v", err)
-				}
 
-				fmt.Printf("  %s (%s, %s)\n", master.IP, master.SSHUser, master.SSHPass)*/
+		// Execute the command on the remote server
+		err := remote.RemoteExec(master.SSHUser, master.SSHPass, master.IP, command)
+		if err != nil {
+			return fmt.Errorf("Erro Remote-Server: %v", err)
+		}
+
 	}
 
 	fetchK3sToken(cfg.Masters[0].IP, cfg.Masters[0].SSHUser, cfg.Masters[0].SSHPass, cfg.K3sTokenFile)
@@ -80,29 +57,31 @@ func InstallK3sMaster() error {
 func fetchK3sToken(masterHost, user, password, tokenFile string) error {
 	fmt.Printf("[INFO] Lese node-token vom Master (%s)...\n", masterHost)
 
-	output, err := remote.RemoteExecOutput(user, password, masterHost, "cat /var/lib/rancher/k3s/server/node-token")
-	if err != nil {
-		return fmt.Errorf("Fehler beim Abrufen des node-token: %v", err)
-	}
+	var output string
+	var err error
+	const maxRetries = 10
 
-	tokenRaw := strings.TrimSpace(output)
-	fmt.Printf("[DEBUG] Antwort vom Master:\n%s\n", tokenRaw)
-
-	var token string
-	for _, line := range strings.Split(tokenRaw, "\n") {
-		if strings.HasPrefix(line, "K") {
-			token = line
+	cmd := fmt.Sprintf("echo '%s' | sudo -S cat /var/lib/rancher/k3s/server/node-token", password)
+	for i := 0; i < maxRetries; i++ {
+		output, err = remote.RemoteExecOutput(user, password, masterHost, cmd)
+		if err == nil {
 			break
 		}
+		log.Printf("[WARN] Token noch nicht verfügbar (Versuch %d/%d): %v", i+1, maxRetries, err)
+		time.Sleep(5 * time.Second)
 	}
 
-	if token == "" {
-		return fmt.Errorf("Kein gültiger Token gefunden in:\n%s", tokenRaw)
-	}
-
-	err = os.WriteFile(tokenFile, []byte(token+"\n"), 0600)
 	if err != nil {
-		return fmt.Errorf("Fehler beim Schreiben der Token-Datei: %v", err)
+		return fmt.Errorf("Fehler beim Abrufen des node-token: %v\nOutput: %s", err, output)
+	}
+
+	token := strings.TrimSpace(output)
+
+	// Token-Datei schreiben
+	result := strings.Split(token, ": ")
+	err = os.WriteFile(tokenFile, []byte(result[1]+"\n"), 0600)
+	if err != nil {
+		return fmt.Errorf("Fehler beim Schreiben der Token-Datei (%s): %v", tokenFile, err)
 	}
 
 	fmt.Printf("[OK] Token erfolgreich gespeichert unter %s\n", tokenFile)
@@ -110,7 +89,7 @@ func fetchK3sToken(masterHost, user, password, tokenFile string) error {
 }
 
 func fetchKubeconfigLocal(masterHost, userName, password string) error {
-	fmt.Println("[INFO] Hole kubeconfig vom Master...")
+	fmt.Println("[INFO] Holle kubeconfig vom Master...")
 
 	// SSH Verbindung
 	config := &ssh.ClientConfig{
