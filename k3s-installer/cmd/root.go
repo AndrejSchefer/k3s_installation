@@ -54,7 +54,7 @@ func showMenu() {
 	case "Install k3s Worker":
 		internal.InstallK3sWorker()
 	case "Create a NFS mount on worker":
-		mountNFS()
+		internal.MountNFS()
 	case "Create a NFS PV":
 		createNFSPV()
 	case "Install Cert Manager":
@@ -72,15 +72,6 @@ func showMenu() {
 }
 
 // Dummy implementation placeholders
-
-func installK3sWorker() {
-	fmt.Println("Installing K3s Worker...")
-}
-
-func mountNFS() {
-	fmt.Println("Mounting NFS on Worker...")
-}
-
 func createNFSPV() {
 	fmt.Println("Creating NFS Persistent Volume...")
 }
