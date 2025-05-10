@@ -44,6 +44,16 @@ func InstallNFSSubdirExternalProvisioner() {
 				"{{NFS_EXPORT}}": cfg.NFS.Export,
 			},
 		},
+		{
+			name:       "PV",
+			template:   "internal/templates/nfs/pv.yaml",
+			remotePath: "/tmp/pv.yaml",
+			vars: map[string]string{
+				"{{NFS_SERVER}}":   cfg.NFS.NFS_Server,
+				"{{NFS_EXPORT}}":   cfg.NFS.Export,
+				"{{NFS_CAPACITY}}": cfg.NFS.Capacity,
+			},
+		},
 	}
 
 	for _, step := range steps {

@@ -3,7 +3,6 @@ package internal
 import (
 	"fmt"
 	"io"
-	"log"
 	"os"
 	"strings"
 
@@ -35,8 +34,6 @@ func ApplyRemoteYAML(host, user, password, localPath, remotePath string, replace
 	}
 
 	conn, err := ssh.Dial("tcp", host+":22", sshConfig)
-	log.Println(conn)
-
 	if err != nil {
 		return fmt.Errorf("SSH connection failed: %w", err)
 	}
