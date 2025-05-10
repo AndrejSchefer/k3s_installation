@@ -58,7 +58,7 @@ func showMenu() {
 	case "Create a NFS PV":
 		createNFSPV()
 	case "Install Cert Manager":
-		installCertManager()
+		internal.InstallCertManager()
 	case "Install full K3s-Cluster":
 		installFullCluster()
 	case "Install NFS Provisioner":
