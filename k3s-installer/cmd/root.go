@@ -76,12 +76,13 @@ func createNFSPV() {
 	fmt.Println("Creating NFS Persistent Volume...")
 }
 
-func installCertManager() {
-	fmt.Println("Installing Cert Manager...")
-}
-
 func installFullCluster() {
 	fmt.Println("Installing full K3s Cluster...")
+	internal.InstallK3sMaster()
+	internal.InstallK3sWorker()
+	internal.MountNFS()
+	internal.InstallCertManager()
+	internal.InstallNFSSubdirExternalProvisioner()
 }
 
 func uninstallFullCluster() {
