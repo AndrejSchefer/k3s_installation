@@ -64,7 +64,7 @@ func showMenu() {
 	case "Install NFS Provisioner":
 		internal.InstallNFSSubdirExternalProvisioner()
 	case "Uninstall k3s FULL Cluster":
-		uninstallFullCluster()
+		internal.UninstallK3sCluster()
 	case "Exit":
 		fmt.Println("Exiting.")
 		return
@@ -83,8 +83,4 @@ func installFullCluster() {
 	internal.MountNFS()
 	internal.InstallCertManager()
 	internal.InstallNFSSubdirExternalProvisioner()
-}
-
-func uninstallFullCluster() {
-	fmt.Println("Uninstalling full K3s Cluster...")
 }
