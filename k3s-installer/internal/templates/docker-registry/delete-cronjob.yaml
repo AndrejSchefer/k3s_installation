@@ -1,0 +1,43 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: registry-garbage-collection
+  namespace: ic-docker-registry
+spec:
+  schedule: "0 3 * * *" # Täglich um 03:00 Uhr
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: registry-gc
+              image: registry:2
+              command:
+                [
+                  "registry",
+                  "garbage-collect",
+                  "/etc/docker/registry/config.yml",
+                ]
+              volumeMounts:
+                - name: registry-storage
+                  mountPath: /var/lib/registry
+                - name: auth
+                  mountPath: /auth
+                  readOnly: true
+              env:
+                - name: REGISTRY_STORAGE_DELETE_ENABLED
+                  value: "true"
+                - name: REGISTRY_AUTH
+                  value: "htpasswd"
+                - name: REGISTRY_AUTH_HTPASSWD_REALM
+                  value: "Registry Realm"
+                - name: REGISTRY_AUTH_HTPASSWD_PATH
+                  value: "/auth/htpasswd"
+          volumes:
+            - name: registry-storage
+              persistentVolumeClaim:
+                claimName: igneos-cloud-localhost-pvc
+            - name: auth
+              secret:
+                secretName: registry-credentials

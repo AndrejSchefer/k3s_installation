@@ -30,6 +30,7 @@ func showMenu() {
 		"Install Cert Manager",
 		"Install full K3s-Cluster",
 		"Install NFS Provisioner",
+		"Install Docker Registry",
 		"Uninstall k3s FULL Cluster",
 		"Exit",
 	}
@@ -63,6 +64,8 @@ func showMenu() {
 		installFullCluster()
 	case "Install NFS Provisioner":
 		internal.InstallNFSSubdirExternalProvisioner()
+	case "Install Docker Registry":
+		internal.InstallDockerRegistry()
 	case "Uninstall k3s FULL Cluster":
 		internal.UninstallK3sCluster()
 	case "Exit":

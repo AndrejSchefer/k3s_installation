@@ -23,22 +23,22 @@ func InstallNFSSubdirExternalProvisioner() {
 		{
 			name:       "Namespace",
 			template:   "internal/templates/nfs/nfs-namespace.yaml",
-			remotePath: "/tmp/nfs-namespace.yaml",
+			remotePath: "nfs-namespace.yaml",
 		},
 		{
 			name:       "RBAC",
 			template:   "internal/templates/nfs/nfs-rbac.yaml",
-			remotePath: "/tmp/nfs-rbac.yaml",
+			remotePath: "nfs-rbac.yaml",
 		},
 		{
 			name:       "StorageClass",
 			template:   "internal/templates/nfs/nfs-storageclass.yaml",
-			remotePath: "/tmp/nfs-storageclass.yaml",
+			remotePath: "nfs-storageclass.yaml",
 		},
 		{
 			name:       "Deployment",
 			template:   "internal/templates/nfs/nfs-deployment.yaml",
-			remotePath: "/tmp/nfs-deployment.yaml",
+			remotePath: "nfs-deployment.yaml",
 			vars: map[string]string{
 				"{{NFS_SERVER}}": cfg.NFS.NFS_Server,
 				"{{NFS_EXPORT}}": cfg.NFS.Export,
@@ -47,7 +47,7 @@ func InstallNFSSubdirExternalProvisioner() {
 		{
 			name:       "PV",
 			template:   "internal/templates/nfs/pv.yaml",
-			remotePath: "/tmp/pv.yaml",
+			remotePath: "pv.yaml",
 			vars: map[string]string{
 				"{{NFS_SERVER}}":   cfg.NFS.NFS_Server,
 				"{{NFS_EXPORT}}":   cfg.NFS.Export,

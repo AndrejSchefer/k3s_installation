@@ -17,13 +17,21 @@ type NFSConfig struct {
 	Capacity   string `json:"capacity"`
 }
 
+type DockerRegistry struct {
+	URL                string `json:"url"`
+	PVCStorageCapacity string `json:"pvc_storagy_capacity"`
+	User               string `json:"user"`
+	Pass               string `json:"pass"`
+}
+
 // AppConfig represents the entire configuration
 type AppConfig struct {
-	Masters           []NodeConfig `json:"masters"`
-	Workers           []NodeConfig `json:"workers"`
-	K3sTokenFile      string       `json:"k3s_token_file"`
-	NFS               NFSConfig    `json:"nfs"`
-	Email             string       `json:"email"`
-	Domain            string       `json:"domain"`
-	ClusterIssuerName string       `json:"cluster_issuer_name"`
+	Masters           []NodeConfig   `json:"masters"`
+	Workers           []NodeConfig   `json:"workers"`
+	K3sTokenFile      string         `json:"k3s_token_file"`
+	NFS               NFSConfig      `json:"nfs"`
+	DockerRegistry    DockerRegistry `json:"docker_registry"`
+	Email             string         `json:"email"`
+	Domain            string         `json:"domain"`
+	ClusterIssuerName string         `json:"cluster_issuer_name"`
 }

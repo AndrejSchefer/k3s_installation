@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: ic-docker-registry
+  labels:
+    author: andrej.schefer # Maschinen lesbar
+  annotations:
+    author: Andrej Schefer <andrej.schefer@igneos.cloud> # für menschen lesbaren code

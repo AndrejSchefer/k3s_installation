@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ic-docker-registry
+  namespace: ic-docker-registry
+  labels:
+    author: andrej.schefer
+  annotations:
+    author: Andrej Schefer <andrej.schefer@igneos.cloud>
+spec:
+  replicas: 1 # funktioniert nur mir einem
+  selector:
+    matchLabels:
+      app: ic-docker-registry
+  template:
+    metadata:
+      labels:
+        app: ic-docker-registry
+      annotations:
+        author: Andrej Schefer <andrej.schefer@igneos.cloud>
+    spec:
+      volumes:
+        - name: registry-auth
+          secret:
+            secretName: registry-credentials
+        - name: ic-docker-registry
+          persistentVolumeClaim:
+            claimName: igneos-cloud-registry-pvc
+
+      containers:
+        - name: ic-docker-registry
+          image: registry:2
+          ports:
+            - containerPort: 5000
+          env:
+            - name: REGISTRY_STORAGE_DELETE_ENABLED
+              value: "true"
+          resources:
+            requests:
+              memory: "96Mi"
+              cpu: "100m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+          volumeMounts:
+            - name: ic-docker-registry
+              mountPath: "/var/lib/registry"
+            - name: registry-auth
+              mountPath: /auth
+              readOnly: true
