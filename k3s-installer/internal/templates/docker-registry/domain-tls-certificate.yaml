@@ -4,10 +4,15 @@ metadata:
   name: ic-docker-registry
   namespace: ic-docker-registry
 spec:
+  # Secret will be CREATED/UPDATED by cert-manager
   secretName: ic-docker-registry-cert-tls
   issuerRef:
-    name: letsencrypt-prod
     kind: ClusterIssuer
-  commonName: "{{DOCKER_REGISTRY_URL}}"
+    name: letsencrypt-prod
+  commonName: "{{DOCKER_REGISTRY_URL}}"       # English: CN of the cert
   dnsNames:
-    - "{{DOCKER_REGISTRY_URL}}"
+    - "{{DOCKER_REGISTRY_URL}}"               # English: SANs
+  privateKey:
+    algorithm: RSA                                 # English: 2048-bit key
+    rotationPolicy: Never                          # English: keep same key
+  renewBefore: 240h                                # English: renew 10 days early

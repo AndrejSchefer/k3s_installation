@@ -1,3 +1,4 @@
+# ingress.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -5,20 +6,21 @@ metadata:
   namespace: ic-docker-registry
   annotations:
     author: "Andrej Schefer <andrej.schefer@igneos.cloud>"
-    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    cert-manager.io/cluster-issuer: letsencrypt-prod
 spec:
+  ingressClassName: traefik          # <-- explizit angeben
   tls:
-    - hosts:
-        - "{{DOCKER_REGISTRY_URL}}"
-      secretName: ic-docker-registry-cert-tls
+  - hosts:
+      - "{{DOCKER_REGISTRY_URL}}"   # <-- 100 % korrekt!
+    secretName: ic-docker-registry-cert-tls
   rules:
-    - host: "{{DOCKER_REGISTRY_URL}}"
-      http:
-        paths:
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: ic-docker-registry
-                port:
-                  number: 5000
+  - host: "{{DOCKER_REGISTRY_URL}}"
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ic-docker-registry
+            port:
+              number: 5000

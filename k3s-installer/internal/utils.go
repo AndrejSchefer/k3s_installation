@@ -70,7 +70,6 @@ func ApplyRemoteYAML(host, user, password, localPath, remotePath string, replace
 	session.Stderr = os.Stderr
 
 	applyCmd := fmt.Sprintf("echo '%s' | sudo -S bash -c 'kubectl apply -f %s && rm -f %s'", password, remotePath, remotePath)
-	//applyCmd := fmt.Sprintf("echo '%s' | sudo -S bash -c 'kubectl apply -f %s && echo %s'", password, remotePath, remotePath)
 	if err := session.Run(applyCmd); err != nil {
 		return fmt.Errorf("failed to apply YAML remotely: %w", err)
 	}

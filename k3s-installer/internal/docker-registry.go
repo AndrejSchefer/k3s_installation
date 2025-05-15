@@ -119,5 +119,5 @@ func InstallDockerRegistry() {
 		}
 	}
 
-	log.Println("[SUCCESS] NFS Subdir External Provisioner successfully installed")
+	log.Println("[SUCCESS] Docker Registry successfully installed")
 }
