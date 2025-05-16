@@ -43,7 +43,6 @@ func initialModel() model {
 			"Install Kubernetes Master",
 			"Install Kubernetes Worker",
 			"Create a NFS mount on worker",
-			"Create a NFS PV",
 			"Install Cert Manager",
 			"Install NFS Provisioner",
 			"Install Docker Registry",
@@ -125,8 +124,6 @@ func handleChoice(choice string) {
 		internal.InstallK3sWorker()
 	case "Create a NFS mount on worker":
 		internal.MountNFS()
-	case "Create a NFS PV":
-		createNFSPV()
 	case "Install Cert Manager":
 		internal.InstallCertManager()
 	case "Install Full K3s-Cluster":
@@ -143,13 +140,8 @@ func handleChoice(choice string) {
 	}
 }
 
-// Dummy Funktionen
-func createNFSPV() {
-	fmt.Println("Creating NFS Persistent Volume...")
-}
-
 func installFullCluster() {
-	fmt.Println("\nInstalling full K3s Cluster with all components...\n")
+	fmt.Println("\nInstalling full K3s Cluster with all components...")
 	internal.InstallK3sMaster()
 	internal.InstallK3sWorker()
 	internal.MountNFS()
