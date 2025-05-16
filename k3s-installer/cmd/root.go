@@ -39,15 +39,15 @@ type model struct {
 func initialModel() model {
 	return model{
 		items: []string{
-			"Install k3s Master",
-			"Install k3s Worker",
+			"Install Full K3s-Cluster",
+			"Install Kubernetes Master",
+			"Install Kubernetes Worker",
 			"Create a NFS mount on worker",
 			"Create a NFS PV",
 			"Install Cert Manager",
-			"Install full K3s-Cluster",
 			"Install NFS Provisioner",
 			"Install Docker Registry",
-			"Uninstall k3s FULL Cluster",
+			"Uninstall Kubernetes FULL Cluster",
 			"Exit",
 		},
 	}
@@ -82,8 +82,12 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-	s := titleStyle.Render("\n  IGNEOS.CLOUD K3s Cluster Installer\n")
-	s += "  Use ↑ ↓ to move, ↵ to select\n\n"
+	s := titleStyle.Render(`
+	----------------------------------------------------------
+	IGNEOS.CLOUD K3s Cluster Installer
+	----------------------------------------------------------
+	`)
+	//s += "  Use ↑ ↓ to move, ↵ to select\n\n"
 
 	for i, item := range m.items {
 		cursor := " "
@@ -115,9 +119,9 @@ func startMenu() {
 
 func handleChoice(choice string) {
 	switch choice {
-	case "Install k3s Master":
+	case "Install Kubernetes Master":
 		internal.InstallK3sMaster()
-	case "Install k3s Worker":
+	case "Install Kubernetes Worker":
 		internal.InstallK3sWorker()
 	case "Create a NFS mount on worker":
 		internal.MountNFS()
@@ -125,13 +129,13 @@ func handleChoice(choice string) {
 		createNFSPV()
 	case "Install Cert Manager":
 		internal.InstallCertManager()
-	case "Install full K3s-Cluster":
+	case "Install Full K3s-Cluster":
 		installFullCluster()
 	case "Install NFS Provisioner":
 		internal.InstallNFSSubdirExternalProvisioner()
 	case "Install Docker Registry":
 		internal.InstallDockerRegistry()
-	case "Uninstall k3s FULL Cluster":
+	case "Uninstall Kubernetes FULL Cluster":
 		internal.UninstallK3sCluster()
 	case "Exit":
 		fmt.Println("Goodbye!")
