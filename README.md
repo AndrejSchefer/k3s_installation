@@ -54,8 +54,6 @@ All operations are orchestrated based on a single declarative **`config.json`** 
 Thanks to this configuration-driven approach, the K3s installer is suitable for **developers, DevOps engineers, and platform teams** who require a fast, repeatable way to stand up Kubernetes clusters—whether for local development, internal testing, or hybrid infrastructure scenarios.
 
 
-Danke für den Hinweis! Hier ist der überarbeitete Abschnitt **„▶️ Usage“** im `README.md`, der erklärt, wie man das vorgebaute Binary verwendet – **abhängig vom Betriebssystem**, und basierend auf den Builds im Verzeichnis [`/builds`](https://github.com/AndrejSchefer/k3s_installation/tree/master/builds):
-
 
 ## Usage
 After configuring your `config.json`, you can launch the installer using a **pre-built binary** suitable for your operating system.
