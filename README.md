@@ -1,5 +1,60 @@
 # Igneos.Cloud K3s installer (beta)
 
+The project is written in **Go (Golang)** and provides a **modular, interactive CLI tool** designed to **automate the installation, configuration, and management of lightweight Kubernetes clusters using K3s**. Its main objective is to significantly reduce the manual overhead of setting up a distributed Kubernetes environment while ensuring consistency, repeatability, and operational simplicity.
+
+This tool enables users to **provision a complete K3s cluster** consisting of a **single master node and multiple worker nodes** across remote systems. It establishes **SSH connections** to the target hosts (either physical servers or virtual machines), where it executes installation routines, applies configurations, and starts necessary services. Authentication is handled via user/password or SSH key pairs, as defined in a declarative JSON-based configuration file.
+
+The core functionality covers the entire cluster lifecycle:
+
+* **Master node initialization**: Installs K3s on the designated master host, configures secure networking interfaces, and generates the join token for worker registration.
+* **Worker node integration**: Installs K3s on each worker, configures them using the master’s join token, and seamlessly adds them to the cluster.
+* **Cluster-wide customization**: Includes support for mounting NFS volumes, setting up private container registries, deploying Ingress resources, and automating TLS certificate issuance via cert-manager.
+
+All operations are orchestrated based on a single declarative **`config.json`** file, which defines the full topology and behavior of the cluster, including IP addresses, SSH access credentials, cluster metadata (e.g., domain names, ACME email), and optional services (such as Docker Registry, NFS Provisioner).
+
+```json
+{
+  "masters": [
+    {
+      "ip": "",
+      "ssh_user": "",
+      "ssh_pass": ""
+    }
+  ],
+  "workers": [
+    {
+      "ip": "",
+      "ssh_user": "",
+      "ssh_pass": ""
+    }
+  ],
+  "docker_registry":{
+    "url": "",
+    "pvc_storagy_capacity":"10Gi",
+    "pass": "123456",
+    "user": "registry"
+  },
+  "k3s_token_file": "master-node-token",
+  "nfs": {
+    "nfs_server": "",
+    "nfs_user": "",
+    "nfs_pass": "",
+    "server": "10.0.0.10",
+    "export": "/mnt/k3s-nfs-localstorage",
+    "capacity": "100Gi"
+  },
+  "email": "",
+  "domain": "",
+  "cluster_issuer_name": "letsencrypt-prod"
+}
+```
+
+
+
+Thanks to this configuration-driven approach, the K3s installer is suitable for **developers, DevOps engineers, and platform teams** who require a fast, repeatable way to stand up Kubernetes clusters—whether for local development, internal testing, or hybrid infrastructure scenarios.
+
+
+
 ## Docker Registry
 Guide: Using Kubernetes imagePullSecrets with Your Private Docker Registry
 
