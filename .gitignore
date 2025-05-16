@@ -1,5 +1,6 @@
 cluster.conf
 __*
-
+config.json
 *.log
 master-node-token
+.htpasswd

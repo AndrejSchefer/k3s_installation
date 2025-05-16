@@ -84,10 +84,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m model) View() string {
 	s := titleStyle.Render(`
 	----------------------------------------------------------
-	IGNEOS.CLOUD K3s Cluster Installer
+	IGNEOS.CLOUD K3s Cluster Installer (beta)
 	----------------------------------------------------------
 	`)
-	//s += "  Use ↑ ↓ to move, ↵ to select\n\n"
+	s += "\n  Use ↑ ↓ to move, ↵ to select\n\n"
 
 	for i, item := range m.items {
 		cursor := " "

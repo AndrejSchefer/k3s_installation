@@ -1,4 +1,4 @@
-# Igneos.Cloud K3s installer
+# Igneos.Cloud K3s installer (beta)
 
 ## Docker Registry
 Guide: Using Kubernetes imagePullSecrets with Your Private Docker Registry
