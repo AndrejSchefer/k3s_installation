@@ -1,30 +1,34 @@
 {
   "masters": [
     {
-      "ip": "192.168.1.10",
-      "ssh_user": "root",
-      "ssh_pass": "pass123"
+      "ip": "",
+      "ssh_user": "",
+      "ssh_pass": ""
     }
   ],
   "workers": [
     {
-      "ip": "192.168.1.20",
-      "ssh_user": "root",
-      "ssh_pass": "pass456"
-    },
-    {
-      "ip": "192.168.1.21",
-      "ssh_user": "root",
-      "ssh_pass": "pass789"
+      "ip": "",
+      "ssh_user": "",
+      "ssh_pass": ""
     }
   ],
+  "docker_registry":{
+    "url": "",
+    "pvc_storagy_capacity":"10Gi",
+    "pass": "123456",
+    "user": "registry"
+  },
   "k3s_token_file": "master-node-token",
   "nfs": {
+    "nfs_server": "",
+    "nfs_user": "",
+    "nfs_pass": "",
     "server": "10.0.0.10",
     "export": "/mnt/k3s-nfs-localstorage",
     "capacity": "100Gi"
   },
-  "email": "email@example.de",
-  "domain": "demo.example.com",
+  "email": "",
+  "domain": "",
   "cluster_issuer_name": "letsencrypt-prod"
 }
