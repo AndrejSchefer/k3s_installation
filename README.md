@@ -54,6 +54,52 @@ All operations are orchestrated based on a single declarative **`config.json`** 
 Thanks to this configuration-driven approach, the K3s installer is suitable for **developers, DevOps engineers, and platform teams** who require a fast, repeatable way to stand up Kubernetes clusters—whether for local development, internal testing, or hybrid infrastructure scenarios.
 
 
+Danke für den Hinweis! Hier ist der überarbeitete Abschnitt **„▶️ Usage“** im `README.md`, der erklärt, wie man das vorgebaute Binary verwendet – **abhängig vom Betriebssystem**, und basierend auf den Builds im Verzeichnis [`/builds`](https://github.com/AndrejSchefer/k3s_installation/tree/master/builds):
+
+
+## Usage
+After configuring your `config.json`, you can launch the installer using a **pre-built binary** suitable for your operating system.
+
+### Step 1: Download the Binary
+
+Choose the binary matching your OS and architecture from the [`builds/`](https://github.com/AndrejSchefer/k3s_installation/tree/master/builds) folder:
+
+| OS      | Architecture | Binary                                   |
+| ------- | ------------ | ---------------------------------------- |
+| Linux   | amd64        | `builds/k3s-installer-linux-amd64`       |
+| macOS   | amd64        | `builds/k3s-installer-darwin-amd64`      |
+| Windows | amd64        | `builds/k3s-installer-windows-amd64.exe` |
+
+> 📦 You can also build from source using `go build -o builds/k3s-installer .`
+
+### Step 2: Prepare Configuration
+
+Make sure your `config.json` file exists in the project root or specify the path explicitly.
+
+### 🚀 Step 3: Run the Installer
+
+**On Linux/macOS:**
+
+```bash
+chmod +x builds/k3s-installer-linux-amd64
+./builds/k3s-installer-linux-amd64
+```
+
+**On Windows (PowerShell):**
+
+```powershell
+.\builds\k3s-installer-windows-amd64.exe
+```
+
+You will be guided through an interactive TUI menu powered by [`bubbletea`](https://github.com/charmbracelet/bubbletea) and [`survey`](https://github.com/AlecAivazis/survey) allowing you to:
+
+* ✅ Install K3s Master
+* ⚙️ Install K3s Workers
+* 📦 Deploy NFS mounts and Persistent Volumes
+* 🔐 Install cert-manager with Let's Encrypt
+* 🐳 Create and configure a private Docker Registry
+* 🚀 Set up the entire cluster with all components in one step
+
 
 ## Docker Registry
 Guide: Using Kubernetes imagePullSecrets with Your Private Docker Registry
