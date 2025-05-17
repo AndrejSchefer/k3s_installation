@@ -24,7 +24,7 @@ func createRegistrySecretWithHtpasswd() error {
 	pass := cfg.DockerRegistry.Pass
 
 	// Define the path on the remote host where the .htpasswd file will be stored
-	htpasswdPath := "/tmp/.htpasswd"
+	htpasswdPath := "/home/kubernetes/.htpasswd"
 
 	// Bash script to create htpasswd file and Kubernetes Secret
 	script := fmt.Sprintf(`echo '%[1]s' | sudo -S bash -c '
@@ -39,14 +39,16 @@ func createRegistrySecretWithHtpasswd() error {
 
 	# Create or update Kubernetes Secret
 	kubectl create secret generic registry-credentials \
-	--from-file=htpasswd=%[2]s \
-	-n %[5]s \
-	--dry-run=client -o yaml | kubectl apply -f -
+  --from-file=htpasswd=%[2]s \
+  -n %[5]s \
+  --dry-run=client -o yaml > registry-credentials-secret.yaml
+
+  	kubectl apply -f registry-credentials-secret.yaml -n %[5]s
 
 
 	# Remove htpasswd file
-	rm -f %[2]s
-	'`, master.SSHPass, htpasswdPath, user, pass, namespace)
+	rm registry-credentials-secret.yaml '
+	`, master.SSHPass, htpasswdPath, user, pass, namespace)
 
 	log.Printf("[INFO] Creating registry Secret on %s in namespace %s…", master.IP, namespace)
 	if err := remote.RemoteExec(master.SSHUser, master.SSHPass, master.IP, script); err != nil {

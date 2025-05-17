@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"igneos.cloud/kubernetes/k3s-installer/config"
+	"igneos.cloud/kubernetes/k3s-installer/utils"
 )
 
 func InstallNFSSubdirExternalProvisioner() {
@@ -14,6 +15,9 @@ func InstallNFSSubdirExternalProvisioner() {
 
 	master := cfg.Masters[0]
 
+	utils.PrintSectionHeader(
+		"Installing NFS Subdir External Provisioner...", "[INFO]", utils.ColorBlue, true,
+	)
 	steps := []struct {
 		name       string
 		template   string
@@ -57,11 +61,16 @@ func InstallNFSSubdirExternalProvisioner() {
 	}
 
 	for _, step := range steps {
-		log.Printf("[STEP] Applying %s...", step.name)
+		utils.PrintSectionHeader(
+			"Applying "+step.name+"...", "[INFO]", utils.ColorBlue, false,
+		)
 		if err := ApplyRemoteYAML(master.IP, master.SSHUser, master.SSHPass, step.template, step.remotePath, step.vars); err != nil {
 			log.Fatalf("%s step failed: %v", step.name, err)
 		}
 	}
 
 	log.Println("[SUCCESS] NFS Subdir External Provisioner successfully installed")
+	utils.PrintSectionHeader(
+		"NFS Subdir External Provisioner successfully installed", "[SUCCESS]", utils.ColorGreen, false,
+	)
 }

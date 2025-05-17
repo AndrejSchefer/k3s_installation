@@ -2,17 +2,17 @@ package internal
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
 	"igneos.cloud/kubernetes/k3s-installer/config"
 	"igneos.cloud/kubernetes/k3s-installer/remote"
+	"igneos.cloud/kubernetes/k3s-installer/utils"
 )
 
 // InstallK3sWorker installiert den K3s-Agent auf einem Worker-Knoten via SSH
 func InstallK3sWorker() error {
-	log.Println("[START] Installing worker nodes...")
+	utils.PrintSectionHeader("Installing K3s worker nodes...", "[INFO]", utils.ColorBlue, true)
 
 	cfg, err := config.LoadConfig("config.json")
 	if err != nil {
@@ -29,15 +29,19 @@ func InstallK3sWorker() error {
 	if err != nil {
 		return fmt.Errorf("Fehler beim Lesen der Token-Datei: %v", err)
 	}
+
 	token := strings.TrimSpace(string(tokenBytes))
-	log.Printf("[INFO] K3s Token erfolgreich geladen aus %s\n", cfg.K3sTokenFile)
+
+	msg := fmt.Sprintf("K3s Token is loading successfully %s\n", cfg.K3sTokenFile)
+	utils.PrintSectionHeader(msg, "[INFO]", utils.ColorBlue, true)
 
 	for _, worker := range cfg.Workers {
 		user := worker.SSHUser
 		password := worker.SSHPass
 		host := worker.IP
 
-		fmt.Printf("[INFO] Installing k3s agent on worker node %s\n", host)
+		msg := fmt.Sprintf("[INFO] Installing k3s agent on worker node %s\n", host)
+		utils.PrintSectionHeader(msg, "[INFO]", utils.ColorBlue, false)
 
 		// Secure and robust installation command with set -e
 		installCmd := fmt.Sprintf(`
@@ -50,17 +54,18 @@ func InstallK3sWorker() error {
 			return fmt.Errorf("Fehler bei der Installation auf Worker %s: %v", host, err)
 		}
 
-		fmt.Printf("[INFO] Verifiziere k3s-agent auf %s...\n", host)
+		utils.PrintSectionHeader(fmt.Sprintf("Verify k3s-agent on %s...\n", host), "[INFO]", utils.ColorBlue, true)
 
 		checkCmd := "systemctl is-active --quiet k3s-agent"
 		err = remote.RemoteExec(user, password, host, checkCmd)
 		if err == nil {
-			fmt.Printf("[OK] k3s agent auf %s ist aktiv und bereit!\n", host)
+			utils.PrintSectionHeader(fmt.Sprintf("k3s agent om %s is active and ready!\n", host), "[SUCCESS]", utils.ColorGreen, false)
+
 		} else {
 			return fmt.Errorf("❌ k3s agent auf %s ist NICHT aktiv: %v", host, err)
 		}
 	}
 
-	log.Println("[SUCCESS] Alle Worker-Knoten erfolgreich installiert.")
+	utils.PrintSectionHeader("K3s worker installation complete.", "[SUCCESS]", utils.ColorGreen, true)
 	return nil
 }

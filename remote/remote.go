@@ -2,13 +2,13 @@ package remote
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/term"
+	"igneos.cloud/kubernetes/k3s-installer/utils"
 )
 
 func RemoteExec(user, password, host string, command string) error {
@@ -64,13 +64,12 @@ func RemoteExec(user, password, host string, command string) error {
 		return fmt.Errorf("PTY konnte nicht angefordert werden: %v", err)
 	}
 
-	log.Printf("[SSH] %s: Führe aus:\n%s\n", host, command)
-
+	//  utils.PrintSectionHeader("", "[SSH]", utils.ColorBlue, false, 40)
 	if err := session.Run(command); err != nil {
-		return fmt.Errorf("Remote-Command fehlgeschlagen: %v", err)
+		return fmt.Errorf("Remote-Command is fail: %v", err)
 	}
 
-	log.Printf("[SSH] %s: Kommando erfolgreich abgeschlossen\n", host)
+	utils.PrintSectionHeader(fmt.Sprintf("%s: Command completed successfully\n", host), "[SSH]", utils.ColorBlue, false)
 	return nil
 }
 
@@ -83,7 +82,7 @@ func RemoteExecOutput(user, password, host, command string) (string, error) {
 
 	client, err := ssh.Dial("tcp", host+":22", config)
 	if err != nil {
-		return "", fmt.Errorf("SSH-Verbindung fehlgeschlagen: %v", err)
+		return "", fmt.Errorf("SSH-Connect is fail: %v", err)
 	}
 	defer client.Close()
 

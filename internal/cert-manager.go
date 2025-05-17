@@ -5,6 +5,7 @@ import (
 
 	"igneos.cloud/kubernetes/k3s-installer/config"
 	"igneos.cloud/kubernetes/k3s-installer/remote"
+	"igneos.cloud/kubernetes/k3s-installer/utils"
 )
 
 // InstallCertManager installs cert-manager and applies the ClusterIssuer.
@@ -16,8 +17,10 @@ func InstallCertManager() {
 
 	master := cfg.Masters[0]
 
-	// Step 1: Apply the cert-manager deployment YAML
-	log.Println("[STEP] Applying cert-manager...")
+	utils.PrintSectionHeader(
+		"Installing cert-manager and ClusterIssuer...", "[INFO]", utils.ColorBlue, true,
+	)
+
 	if err := ApplyRemoteYAML(
 		master.IP,
 		master.SSHUser,
@@ -30,14 +33,18 @@ func InstallCertManager() {
 	}
 
 	// Step 2: Wait for the cert-manager webhook deployment to become ready
-	log.Println("[INFO] Waiting for cert-manager webhook to become ready...")
+	utils.PrintSectionHeader(
+		"Waiting for cert-manager webhook to become ready...", "[INFO]", utils.ColorBlue, false,
+	)
 	waitCmd := "kubectl -n cert-manager rollout status deploy/cert-manager-webhook --timeout=90s"
 	if err := remote.RemoteExec(master.SSHUser, master.SSHPass, master.IP, waitCmd); err != nil {
 		log.Fatalf("[ERROR] cert-manager webhook not ready: %v", err)
 	}
 
 	// Step 3: Apply ClusterIssuer with templated values
-	log.Println("[STEP] Applying ClusterIssuer...")
+	utils.PrintSectionHeader(
+		"Applying ClusterIssuer...", "[INFO]", utils.ColorBlue, false,
+	)
 	vars := map[string]string{
 		"{{EMAIL}}":               cfg.Email,
 		"{{CLUSTER_ISSUER_NAME}}": cfg.ClusterIssuerName,
@@ -54,5 +61,7 @@ func InstallCertManager() {
 		log.Fatalf("[ERROR] Failed to apply ClusterIssuer: %v", err)
 	}
 
-	log.Println("[SUCCESS] cert-manager and ClusterIssuer successfully installed and configured.")
+	utils.PrintSectionHeader(
+		"cert-manager and ClusterIssuer successfully installed.", "[SUCCESS]", utils.ColorGreen, false,
+	)
 }

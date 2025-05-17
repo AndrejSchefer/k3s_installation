@@ -3,12 +3,12 @@ package internal
 import (
 	"bufio"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
 	"igneos.cloud/kubernetes/k3s-installer/config"
 	"igneos.cloud/kubernetes/k3s-installer/remote"
+	"igneos.cloud/kubernetes/k3s-installer/utils"
 )
 
 // confirmAction prompts the user for confirmation before proceeding.
@@ -47,24 +47,34 @@ func UninstallK3sCluster() error {
 		return fmt.Errorf("error loading configuration: %w", err)
 	}
 
+	// Determine the NFS export directory from config
+	exportPath := cfg.NFS.Export
+
 	for _, node := range append(cfg.Masters, cfg.Workers...) {
-		fmt.Printf("[INFO] Starting uninstallation of K3s on %s...\n", node.IP)
+		utils.PrintSectionHeader(fmt.Sprintf("[INFO] Uninstalling K3s on %s...\n", node.IP), "[INFO]", utils.ColorBlue, false)
+		// Build a shell script to run on the remote host
+		script := fmt.Sprintf(`
+# [INFO] Stop K3s services if active
+systemctl stop k3s || true
+systemctl stop k3s-agent || true
 
-		// Shell script to uninstall K3s
-		script := `
-		echo '[INFO] Stopping K3s services if active'
-		systemctl stop k3s || true
-		systemctl stop k3s-agent || true
+# [INFO] Run uninstall scripts if present
+[ -f /usr/local/bin/k3s-uninstall.sh ] && /usr/local/bin/k3s-uninstall.sh
+[ -f /usr/local/bin/k3s-agent-uninstall.sh ] && /usr/local/bin/k3s-agent-uninstall.sh
 
-		echo '[INFO] Executing uninstallation scripts if present'
-		[ -f /usr/local/bin/k3s-uninstall.sh ] && /usr/local/bin/k3s-uninstall.sh
-		[ -f /usr/local/bin/k3s-agent-uninstall.sh ] && /usr/local/bin/k3s-agent-uninstall.sh
+# [INFO] Remove remaining data directories
+rm -rf /etc/rancher /var/lib/rancher /var/lib/kubelet /etc/cni /opt/cni /var/lib/containerd
 
-		echo '[INFO] Removing remaining data directories'
-		rm -rf /etc/rancher /var/lib/rancher /var/lib/kubelet /etc/cni /opt/cni /var/lib/containerd
+# [INFO] Conditionally remove NFS local storage directory if it exists %s
+if [ -d "%s" ]; then
+    echo "[INFO] Removing %s"
+	sudo  rm -rf "%s"
+else
+    echo "[INFO] %s not found, skipping"
+fi
 
-		echo '[INFO] K3s services completely removed on $(hostname)'
-		`
+echo "[INFO] K3s services completely removed on $(hostname)"
+`, exportPath, exportPath, exportPath, exportPath, exportPath)
 
 		// Construct the command to execute the script with sudo privileges
 		fullCommand := fmt.Sprintf("echo '%s' | sudo -S bash -c \"%s\"", node.SSHPass, escapeForDoubleQuotes(script))
@@ -74,7 +84,7 @@ func UninstallK3sCluster() error {
 			return fmt.Errorf("error uninstalling K3s on %s: %w", node.IP, err)
 		}
 
-		log.Printf("[OK] K3s successfully uninstalled from %s.", node.IP)
+		utils.PrintSectionHeader(fmt.Sprintf("[OK] K3s successfully uninstalled from %s.\n", node.IP), "[OK]", utils.ColorGreen, true)
 	}
 
 	return nil

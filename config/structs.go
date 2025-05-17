@@ -9,12 +9,13 @@ type NodeConfig struct {
 
 // NFSConfig represents NFS settings
 type NFSConfig struct {
-	NFS_Server string `json:"nfs_server"`
-	NFS_User   string `json:"nfs_user"`
-	NFS_Pass   string `json:"nfs_pass"`
-	Server     string `json:"server"`
-	Export     string `json:"export"`
-	Capacity   string `json:"capacity"`
+	NetworkCIDR string `json:"network_CIDR"`
+	NFS_Server  string `json:"nfs_server"`
+	NFS_User    string `json:"nfs_user"`
+	NFS_Pass    string `json:"nfs_pass"`
+	Server      string `json:"server"`
+	Export      string `json:"export"`
+	Capacity    string `json:"capacity"`
 }
 
 type DockerRegistry struct {

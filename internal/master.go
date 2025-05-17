@@ -13,6 +13,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	"igneos.cloud/kubernetes/k3s-installer/config"
 	"igneos.cloud/kubernetes/k3s-installer/remote"
+	"igneos.cloud/kubernetes/k3s-installer/utils"
 )
 
 func InstallK3sMaster() error {
@@ -21,7 +22,7 @@ func InstallK3sMaster() error {
 		log.Fatalf("Error loading configuration: %v", err)
 	}
 
-	fmt.Println("[INFO] Starting K3s master installation...")
+	utils.PrintSectionHeader("Installing K3s on master nodes...", "[INFO]", utils.ColorBlue, true)
 
 	for _, master := range cfg.Masters {
 		user := master.SSHUser
@@ -29,10 +30,15 @@ func InstallK3sMaster() error {
 		ip := master.IP
 		tlsDomain := cfg.Domain
 
-		fmt.Printf("[STEP] Installing K3s on %s (%s@%s)\n", ip, user, ip)
+		log.Printf("[STEP] Installing K3s on %s (%s@%s)\n", ip, user, ip)
 
 		// Remote installation script with proper IP substitution
 		cmd := fmt.Sprintf(`echo '%s' | sudo -S bash -c '
+		if ! command -v htpasswd >/dev/null 2>&1; then
+			apt-get update && \
+			apt-get install -y apache2-utils
+		fi && \
+
 		curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode=644 --secrets-encryption --tls-san=%s" sh -s - server &&
 		mkdir -p /home/%s/.kube &&
 		cp /etc/rancher/k3s/k3s.yaml /home/%s/.kube/config &&
@@ -46,12 +52,12 @@ func InstallK3sMaster() error {
 			return fmt.Errorf("failed to install K3s on %s: %w", ip, err)
 		}
 
-		fmt.Printf("[OK] K3s installed successfully on %s\n", ip)
+		utils.PrintSectionHeader(fmt.Sprintf("[SUCCESS] K3s installed successfully on %s\n", ip), "[SUCCESS]", utils.ColorGreen, false)
 	}
 
 	// Fetch the token and kubeconfig from the first master
 	master := cfg.Masters[0]
-	fmt.Println("[STEP] Fetching node token and kubeconfig...")
+	utils.PrintSectionHeader("[INFO] Fetching node token and kubeconfig...", "[INFO]", utils.ColorBlue, false)
 
 	if err := fetchK3sToken(master.IP, master.SSHUser, master.SSHPass, cfg.K3sTokenFile); err != nil {
 		return fmt.Errorf("failed to fetch node-token: %w", err)
@@ -61,12 +67,13 @@ func InstallK3sMaster() error {
 		return fmt.Errorf("failed to fetch kubeconfig: %w", err)
 	}
 
-	fmt.Println("[SUCCESS] K3s master installation complete.")
+	utils.PrintSectionHeader("[SUCCESS] K3s master installation complete.", "[SUCCESS]", utils.ColorGreen, true)
 	return nil
 }
 
 func fetchK3sToken(masterHost, user, password, tokenFile string) error {
-	fmt.Printf("[INFO] Lese node-token vom Master (%s)...\n", masterHost)
+	msg := fmt.Sprintf("Read node-token of Master (%s)...", masterHost)
+	utils.PrintSectionHeader(msg, "[INFO]", utils.ColorBlue, true)
 
 	var output string
 	var err error
@@ -78,7 +85,8 @@ func fetchK3sToken(masterHost, user, password, tokenFile string) error {
 		if err == nil {
 			break
 		}
-		log.Printf("[WARN] Token noch nicht verfügbar (Versuch %d/%d): %v", i+1, maxRetries, err)
+		msg := fmt.Sprintf("[WARN] Token is not available (Attempt %d/%d): %v", i+1, maxRetries, err)
+		utils.PrintSectionHeader(msg, "[WARN]", utils.ColorYellow, false)
 		time.Sleep(5 * time.Second)
 	}
 
@@ -95,13 +103,13 @@ func fetchK3sToken(masterHost, user, password, tokenFile string) error {
 		return fmt.Errorf("Fehler beim Schreiben der Token-Datei (%s): %v", tokenFile, err)
 	}
 
-	fmt.Printf("[OK] Token erfolgreich gespeichert unter %s\n", tokenFile)
+	utils.PrintSectionHeader("Token is save successfully.", "[SUCCESS]", utils.ColorGreen, false)
 	return nil
 }
 
 func fetchKubeconfigLocal(masterHost, userName, password string) error {
-	fmt.Println("[INFO] Holle kubeconfig vom Master...")
 
+	utils.PrintSectionHeader("Fetch kubeconfig of Master...", "[INFO]", utils.ColorBlue, true)
 	// SSH Verbindung
 	config := &ssh.ClientConfig{
 		User:            userName,
@@ -131,7 +139,7 @@ func fetchKubeconfigLocal(masterHost, userName, password string) error {
 	// Quelldatei öffnen
 	srcFile, err := sftpClient.Open("/etc/rancher/k3s/k3s.yaml")
 	if err != nil {
-		return fmt.Errorf("Remote-Datei nicht gefunden: %v", err)
+		return fmt.Errorf("Remote-file not found: %v", err)
 	}
 	defer srcFile.Close()
 
@@ -159,6 +167,6 @@ func fetchKubeconfigLocal(masterHost, userName, password string) error {
 		return fmt.Errorf("Fehler beim Schreiben der geänderten config: %v", err)
 	}
 
-	fmt.Printf("[OK] kubeconfig gespeichert unter: %s\n", dst)
+	utils.PrintSectionHeader("kubeconfig is save successfully.", "[SUCCESS]", utils.ColorGreen, false)
 	return nil
 }
