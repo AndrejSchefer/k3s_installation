@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: ic-docker-registry-without-tls
+  namespace: ic-docker-registry
+spec:
+  type: ClusterIP                            # nur intern
+  selector:
+    app: ic-docker-registry
+  ports:
+    - name: registry
+      protocol: TCP
+      port: 5000                             # Cluster-intern
+      targetPort: 5000                       # English comment: Service only reachable via Ingress.

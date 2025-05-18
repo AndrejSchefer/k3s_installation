@@ -95,11 +95,17 @@ func InstallDockerRegistry() {
 			remotePath: "config_without_tls.yaml",
 			active:     cfg.DockerRegistry.Local,
 		},
+		/*		{
+				name:       "Service",
+				template:   "internal/templates/docker-registry/service.yaml",
+				remotePath: "docker-registry-service.yaml",
+				active:     !cfg.DockerRegistry.Local,
+			},*/
 		{
-			name:       "Service",
-			template:   "internal/templates/docker-registry/service.yaml",
+			name:       "Service without tls",
+			template:   "internal/templates/docker-registry/service_without_tls.yaml",
 			remotePath: "docker-registry-service.yaml",
-			active:     true,
+			active:     cfg.DockerRegistry.Local,
 		},
 		{
 			name:       "Ingress without tls",
@@ -110,15 +116,15 @@ func InstallDockerRegistry() {
 			},
 			active: cfg.DockerRegistry.Local,
 		},
-		{
-			name:       "Ingress",
-			template:   "internal/templates/docker-registry/ingress.yaml",
-			remotePath: "docker-registry-ingress.yaml",
-			vars: map[string]string{
-				"{{DOCKER_REGISTRY_URL}}": cfg.DockerRegistry.URL,
-			},
-			active: !cfg.DockerRegistry.Local,
-		},
+		/*		{
+				name:       "Ingress",
+				template:   "internal/templates/docker-registry/ingress.yaml",
+				remotePath: "docker-registry-ingress.yaml",
+				vars: map[string]string{
+					"{{DOCKER_REGISTRY_URL}}": cfg.DockerRegistry.URL,
+				},
+				active: !cfg.DockerRegistry.Local,
+			},*/
 		{
 			name:       "Domain tls certificate",
 			template:   "internal/templates/docker-registry/domain-tls-certificate.yaml",
@@ -128,12 +134,12 @@ func InstallDockerRegistry() {
 			},
 			active: !cfg.DockerRegistry.Local,
 		},
-		{
+		/*{
 			name:       "Deployment",
 			template:   "internal/templates/docker-registry/deployment.yaml",
 			remotePath: "docker-registry-deployment.yaml",
 			active:     !cfg.DockerRegistry.Local,
-		},
+		},*/
 		{
 			name:       "Deployment without tls",
 			template:   "internal/templates/docker-registry/deployment_without_tls.yaml",
@@ -151,4 +157,12 @@ func InstallDockerRegistry() {
 	}
 
 	utils.PrintSectionHeader("Docker Registry successfully installed", "[SUCCESS]", utils.ColorGreen, false)
+
+	if cfg.DockerRegistry.Local {
+		fmt.Println("You can access the Docker Registry at: docker login http://registry.local:80")
+		fmt.Println("docker login http://registry.local:80")
+		fmt.Println("docker registry username: ", cfg.DockerRegistry.User)
+		fmt.Println("docker registry password: ", cfg.DockerRegistry.Pass)
+
+	}
 }
