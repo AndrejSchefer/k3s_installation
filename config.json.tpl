@@ -17,7 +17,8 @@
     "url": "",
     "pvc_storagy_capacity":"10Gi",
     "pass": "123456",
-    "user": "registry"
+    "user": "registry",
+    local: false
   },
   "k3s_token_file": "master-node-token",
   "nfs": {
