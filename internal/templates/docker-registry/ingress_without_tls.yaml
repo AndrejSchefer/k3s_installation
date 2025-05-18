@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ic-docker-registry-without-tls
+  namespace: ic-docker-registry
+  annotations:
+    author: "Andrej Schefer <andrej.schefer@igneos.cloud>"
+    # cert-manager.io/cluster-issuer: letsencrypt-prod
+    # force Traefik to use port 80 (entrypoint "web")
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  ingressClassName: traefik         
+  rules:
+  - host: "{{DOCKER_REGISTRY_URL}}"
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: ic-docker-registry
+            port:
+              number: 5000

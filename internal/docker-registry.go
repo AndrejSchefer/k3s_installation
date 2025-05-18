@@ -6,6 +6,7 @@ import (
 
 	"igneos.cloud/kubernetes/k3s-installer/config"
 	"igneos.cloud/kubernetes/k3s-installer/remote"
+	"igneos.cloud/kubernetes/k3s-installer/utils"
 )
 
 func createRegistrySecretWithHtpasswd() error {
@@ -71,6 +72,7 @@ func InstallDockerRegistry() {
 		name       string
 		template   string
 		remotePath string
+		active     bool
 		vars       map[string]string
 	}{
 		/*{
@@ -82,19 +84,43 @@ func InstallDockerRegistry() {
 			name:       "Deployment",
 			template:   "internal/templates/docker-registry/deployment.yaml",
 			remotePath: "docker-registry-deployment.yaml",
+			active:     !cfg.DockerRegistry.Local,
+		},
+		{
+			name:       "Deployment without tls",
+			template:   "internal/templates/docker-registry/deployment_without_tls.yaml",
+			remotePath: "deployment_without_tls.yaml",
+			active:     cfg.DockerRegistry.Local,
+		},
+		{
+			name:       "Config without tls",
+			template:   "internal/templates/docker-registry/config_without_tls.yaml",
+			remotePath: "config_without_tls.yaml",
+			active:     cfg.DockerRegistry.Local,
 		},
 		{
 			name:       "Service",
 			template:   "internal/templates/docker-registry/service.yaml",
 			remotePath: "docker-registry-service.yaml",
+			active:     true,
 		},
 		{
-			name:       "ingress",
+			name:       "Ingress without tls",
+			template:   "internal/templates/docker-registry/ingress_without_tls.yaml",
+			remotePath: "docker-registry-ingress_without_tls.yaml",
+			vars: map[string]string{
+				"{{DOCKER_REGISTRY_URL}}": cfg.DockerRegistry.URL,
+			},
+			active: cfg.DockerRegistry.Local,
+		},
+		{
+			name:       "Ingress",
 			template:   "internal/templates/docker-registry/ingress.yaml",
 			remotePath: "docker-registry-ingress.yaml",
 			vars: map[string]string{
 				"{{DOCKER_REGISTRY_URL}}": cfg.DockerRegistry.URL,
 			},
+			active: !cfg.DockerRegistry.Local,
 		},
 		{
 			name:       "Domain tls certificate",
@@ -103,6 +129,7 @@ func InstallDockerRegistry() {
 			vars: map[string]string{
 				"{{DOCKER_REGISTRY_URL}}": cfg.DockerRegistry.URL,
 			},
+			active: !cfg.DockerRegistry.Local,
 		},
 		{
 			name:       "pvc-localhost",
@@ -111,15 +138,18 @@ func InstallDockerRegistry() {
 			vars: map[string]string{
 				"{{PVC_Storage_Capacity}}": cfg.DockerRegistry.PVCStorageCapacity,
 			},
+			active: true,
 		},
 	}
-
+	log.Println(steps)
 	for _, step := range steps {
-		log.Printf("[STEP] Applying %s...", step.name)
-		if err := ApplyRemoteYAML(master.IP, master.SSHUser, master.SSHPass, step.template, step.remotePath, step.vars); err != nil {
-			log.Fatalf("%s step failed: %v", step.name, err)
+		utils.PrintSectionHeader(fmt.Sprintf("Applying %s", step.name), "[INFO]", utils.ColorBlue, false)
+		if step.active {
+			if err := ApplyRemoteYAML(master.IP, master.SSHUser, master.SSHPass, step.template, step.remotePath, step.vars); err != nil {
+				log.Fatalf("%s step failed: %v", step.name, err)
+			}
 		}
 	}
 
-	log.Println("[SUCCESS] Docker Registry successfully installed")
+	utils.PrintSectionHeader("Docker Registry successfully installed", "[SUCCESS]", utils.ColorGreen, false)
 }

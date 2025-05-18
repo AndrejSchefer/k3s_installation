@@ -23,6 +23,7 @@ type DockerRegistry struct {
 	PVCStorageCapacity string `json:"pvc_storagy_capacity"`
 	User               string `json:"user"`
 	Pass               string `json:"pass"`
+	Local              bool   `json:"local"`
 }
 
 // AppConfig represents the entire configuration

@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ic-docker-registry-without-tls
+  namespace: ic-docker-registry
+  labels:
+    app: ic-docker-registry
+spec:
+  replicas: 1  # only one replica supported for local registry
+  selector:
+    matchLabels:
+      app: ic-docker-registry
+
+  template:
+    metadata:
+      labels:
+        app: ic-docker-registry
+
+    spec:
+      volumes:
+        - name: registry-config
+          configMap:
+            name: registry-config
+        - name: registry-storage
+          persistentVolumeClaim:
+            claimName: igneos-cloud-registry-pvc
+        - name: registry-auth
+          secret:
+            secretName: registry-credentials
+
+      containers:
+        - name: registry
+          image: registry:2
+          # serve config.yml explicitly
+          args:
+            - "serve"
+            - "/etc/docker/registry/config.yml"
+          ports:
+            - containerPort: 5000
+
+          env:
+            - name: REGISTRY_STORAGE_DELETE_ENABLED
+              value: "true"
+
+          volumeMounts:
+            - name: registry-config
+              mountPath: /etc/docker/registry/config.yml
+              subPath: config.yml
+            - name: registry-storage
+              mountPath: /var/lib/registry
+            - name: registry-auth
+              mountPath: /auth
+              readOnly: true
