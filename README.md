@@ -29,11 +29,11 @@ All operations are orchestrated based on a single declarative **`config.json`** 
     }
   ],
   "docker_registry":{
-    "url": "",    # if local use registry.local
+    "url": "",                     # if local use registry.local:80
     "pvc_storagy_capacity":"10Gi",
     "pass": "123456",
     "user": "registry",
-    "local": bool
+    "local": true
   },
   "k3s_token_file": "master-node-token",
   "nfs": {
@@ -133,7 +133,7 @@ Click **Apply & Restart** to reload Docker with the new configuration.
 
 ```bash
 # Log in
-docker login registry.local:80
+docker login registry.local:80  # -> with port 80
 
 # Pull an image
 docker pull registry.local:80/<your-image>:latest
@@ -162,7 +162,7 @@ kubectl create namespace my-app
 ### 2) Export registry credentials as environment variables
 
 ```bash
-export REGISTRY_URL="data.docker-registry.igneos.cloud"
+export REGISTRY_URL="docker-registry.igneos.cloud"
 export DOCKER_USER="registry"          # ideally a read-only user
 export DOCKER_PASS="123456"            # do *NOT* hard-code this in scripts
 export NAMESPACE="my-app"

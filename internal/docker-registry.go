@@ -22,7 +22,6 @@ func createRegistrySecretWithHtpasswd() error {
 	pass := cfg.DockerRegistry.Pass
 	htpasswdPath := "/home/kubernetes/.htpasswd"
 
-	// Bash script that will run remotely
 	script := fmt.Sprintf(`echo '%[1]s' | sudo -S bash -c '
 kubectl create namespace %[5]s --dry-run=client -o yaml | kubectl apply -f -
 mkdir -p $(dirname %[2]s) && chmod 700 $(dirname %[2]s)
@@ -46,153 +45,112 @@ rm /tmp/registry-credentials-secret.yaml
 	return nil
 }
 
+// InstallDockerRegistry deploys the Docker registry based on config
 func InstallDockerRegistry() {
 	cfg, err := config.LoadConfig("config.json")
 	if err != nil {
 		log.Fatalf("[ERROR] Failed to load configuration: %v", err)
 	}
-
 	if err := createRegistrySecretWithHtpasswd(); err != nil {
 		log.Fatalf("[ERROR] Failed to create registry Secret: %v", err)
 	}
 
 	master := cfg.Masters[0]
-	if cfg.DockerRegistry.Local {
-		steps := []struct {
-			name       string
-			template   string
-			remotePath string
-			vars       map[string]string
-			active     bool
-		}{
-			{
-				name:       "PVC (Localhost)",
-				template:   "internal/templates/docker-registry/pvc-localhost.yaml",
-				remotePath: "docker-registry-pvc-localhost.yaml",
-				vars: map[string]string{
-					"{{PVC_Storage_Capacity}}": cfg.DockerRegistry.PVCStorageCapacity,
-				},
-				active: true,
-			},
-			{
-				name:       "Config (no TLS)",
-				template:   "internal/templates/docker-registry/config_without_tls.yaml",
-				remotePath: "config_without_tls.yaml",
-				active:     cfg.DockerRegistry.Local == true,
-			},
-			{
-				name:       "Service (no TLS)",
-				template:   "internal/templates/docker-registry/service_without_tls.yaml",
-				remotePath: "docker-registry-service.yaml",
-				active:     cfg.DockerRegistry.Local == true,
-			},
-			{
-				name:       "Ingress (no TLS)",
-				template:   "internal/templates/docker-registry/ingress_without_tls.yaml",
-				remotePath: "docker-registry-ingress_without_tls.yaml",
-				vars: map[string]string{
-					"{{DOCKER_REGISTRY_URL}}": cfg.DockerRegistry.URL,
-				},
-				active: cfg.DockerRegistry.Local == true,
-			},
-			{
-				name:       "Deployment (no TLS)",
-				template:   "internal/templates/docker-registry/deployment_without_tls.yaml",
-				remotePath: "deployment_without_tls.yaml",
-				active:     cfg.DockerRegistry.Local == true,
-			},
-		}
+	local := cfg.DockerRegistry.Local
 
-		for _, step := range steps {
+	steps := []struct {
+		name       string
+		template   string
+		remotePath string
+		vars       map[string]string
+		active     bool
+	}{
+		{
+			name:       "PVC (Localhost)",
+			template:   "internal/templates/docker-registry/pvc-localhost.yaml",
+			remotePath: "docker-registry-pvc-localhost.yaml",
+			vars: map[string]string{
+				"{{PVC_Storage_Capacity}}": cfg.DockerRegistry.PVCStorageCapacity,
+			},
+			active: true,
+		},
+		{
+			name:       "Config (no TLS)",
+			template:   "internal/templates/docker-registry/config_without_tls.yaml",
+			remotePath: "config_without_tls.yaml",
+			active:     local,
+		},
+		{
+			name:       "Service (no TLS)",
+			template:   "internal/templates/docker-registry/service_without_tls.yaml",
+			remotePath: "docker-registry-service.yaml",
+			active:     local,
+		},
+		{
+			name:       "Ingress (no TLS)",
+			template:   "internal/templates/docker-registry/ingress_without_tls.yaml",
+			remotePath: "docker-registry-ingress.yaml",
+			vars: map[string]string{
+				"{{DOCKER_REGISTRY_URL}}": cfg.DockerRegistry.URL,
+			},
+			active: local,
+		},
+		{
+			name:       "Deployment (no TLS)",
+			template:   "internal/templates/docker-registry/deployment_without_tls.yaml",
+			remotePath: "deployment.yaml",
+			active:     local,
+		},
+		{
+			name:       "Service (TLS)",
+			template:   "internal/templates/docker-registry/service.yaml",
+			remotePath: "docker-registry-service.yaml",
+			active:     !local,
+		},
+		{
+			name:       "Ingress (TLS)",
+			template:   "internal/templates/docker-registry/ingress.yaml",
+			remotePath: "docker-registry-ingress.yaml",
+			vars: map[string]string{
+				"{{DOCKER_REGISTRY_URL}}": cfg.DockerRegistry.URL,
+			},
+			active: !local,
+		},
+		{
+			name:       "Domain TLS Certificate",
+			template:   "internal/templates/docker-registry/domain-tls-certificate.yaml",
+			remotePath: "docker-registry-domain-tls-certificate.yaml",
+			vars: map[string]string{
+				"{{DOCKER_REGISTRY_URL}}": cfg.DockerRegistry.URL,
+			},
+			active: !local,
+		},
+		{
+			name:       "Deployment (TLS)",
+			template:   "internal/templates/docker-registry/deployment.yaml",
+			remotePath: "deployment.yaml",
+			active:     !local,
+		},
+	}
+
+	for _, step := range steps {
+		if step.active {
 			utils.PrintSectionHeader(fmt.Sprintf("Applying %s", step.name), "[INFO]", utils.ColorBlue, false)
-
-			if step.active {
-				utils.PrintSectionHeader(fmt.Sprintf("Evaluating %s (active: %t)", step.name, step.active), "[DEBUG]", utils.ColorYellow, false)
-
-				if err := ApplyRemoteYAML(master.IP, master.SSHUser, master.SSHPass, step.template, step.remotePath, step.vars); err != nil {
-					log.Fatalf("[ERROR] Step '%s' failed: %v", step.name, err)
-				}
+			if err := ApplyRemoteYAML(master.IP, master.SSHUser, master.SSHPass, step.template, step.remotePath, step.vars); err != nil {
+				log.Fatalf("[ERROR] Step '%s' failed: %v", step.name, err)
 			}
 		}
+	}
 
-		utils.PrintSectionHeader("Docker Registry successfully installed", "[SUCCESS]", utils.ColorGreen, false)
+	utils.PrintSectionHeader("Docker Registry successfully installed", "[SUCCESS]", utils.ColorGreen, false)
 
-		fmt.Println()
-		fmt.Println("You can access the Docker Registry at:")
+	// Access info
+	fmt.Println("\nYou can access the Docker Registry at:")
+	if local {
 		fmt.Println("→ docker login http://registry.local:80")
-		fmt.Printf("→ Username: %s\n", cfg.DockerRegistry.User)
-		fmt.Printf("→ Password: %s\n", cfg.DockerRegistry.Pass)
+	} else {
+		fmt.Printf("→ docker login %s\n", cfg.DockerRegistry.URL)
 	}
-
-	if cfg.DockerRegistry.Local == false {
-
-		steps := []struct {
-			name       string
-			template   string
-			remotePath string
-			vars       map[string]string
-			active     bool
-		}{
-			{
-				name:       "PVC (Localhost)",
-				template:   "internal/templates/docker-registry/pvc-localhost.yaml",
-				remotePath: "docker-registry-pvc-localhost.yaml",
-				vars: map[string]string{
-					"{{PVC_Storage_Capacity}}": cfg.DockerRegistry.PVCStorageCapacity,
-				},
-				active: true,
-			},
-
-			{
-				name:       "Service (TLS)",
-				template:   "internal/templates/docker-registry/service.yaml",
-				remotePath: "docker-registry-service.yaml",
-				active:     cfg.DockerRegistry.Local == false,
-			},
-			{
-				name:       "Ingress (TLS)",
-				template:   "internal/templates/docker-registry/ingress.yaml",
-				remotePath: "docker-registry-ingress.yaml",
-				vars: map[string]string{
-					"{{DOCKER_REGISTRY_URL}}": cfg.DockerRegistry.URL,
-				},
-				active: cfg.DockerRegistry.Local == false,
-			},
-			{
-				name:       "Domain TLS Certificate",
-				template:   "internal/templates/docker-registry/domain-tls-certificate.yaml",
-				remotePath: "docker-registry-domain-tls-certificate.yaml",
-				vars: map[string]string{
-					"{{DOCKER_REGISTRY_URL}}": cfg.DockerRegistry.URL,
-				},
-				active: cfg.DockerRegistry.Local == false,
-			},
-			{
-				name:       "Deployment (TLS)",
-				template:   "internal/templates/docker-registry/deployment.yaml",
-				remotePath: "docker-registry-deployment.yaml",
-				active:     cfg.DockerRegistry.Local == false,
-			},
-		}
-
-		for _, step := range steps {
-			utils.PrintSectionHeader(fmt.Sprintf("Applying %s", step.name), "[INFO]", utils.ColorBlue, false)
-
-			if step.active {
-				utils.PrintSectionHeader(fmt.Sprintf("Evaluating %s (active: %t)", step.name, step.active), "[DEBUG]", utils.ColorYellow, false)
-
-				if err := ApplyRemoteYAML(master.IP, master.SSHUser, master.SSHPass, step.template, step.remotePath, step.vars); err != nil {
-					log.Fatalf("[ERROR] Step '%s' failed: %v", step.name, err)
-				}
-			}
-		}
-
-		utils.PrintSectionHeader("Docker Registry successfully installed", "[SUCCESS]", utils.ColorGreen, false)
-
-		fmt.Println()
-		fmt.Println("You can access the Docker Registry at:")
-		fmt.Println("→ docker login ", cfg.DockerRegistry.URL)
-		fmt.Printf("→ Username: %s\n", cfg.DockerRegistry.User)
-		fmt.Printf("→ Password: %s\n", cfg.DockerRegistry.Pass)
-	}
+	fmt.Printf("→ Username: %s\n", cfg.DockerRegistry.User)
+	fmt.Printf("→ Password: %s\n", cfg.DockerRegistry.Pass)
 }
