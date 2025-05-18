@@ -147,5 +147,4 @@ func installFullCluster() {
 	internal.MountNFS()
 	internal.InstallCertManager()
 	internal.InstallNFSSubdirExternalProvisioner()
-	internal.InstallDockerRegistry()
 }
