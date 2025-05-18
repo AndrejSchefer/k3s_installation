@@ -19,6 +19,9 @@ spec:
       annotations:
         author: Andrej Schefer <andrej.schefer@igneos.cloud>
     spec:
+      # Ensure the kubelet runs mounts with correct group ownership
+      securityContext:
+        fsGroup: 1000                   # English comment: ensure container process can write to NFS volume
       volumes:
         - name: registry-auth
           secret:

@@ -25,10 +25,11 @@ func MountNFS() {
 
 	//fmt.Printf(utils.ColorBlue+"[INFO] Configuring NFS export on server %s (Export path: %s)\n"+ColotReset, nfsIP, exportPath)
 	utils.PrintSectionHeader(fmt.Sprintf("[INFO] Configuring NFS export on server %s (Export path: %s)\n", nfsIP, exportPath), "[INFO]", utils.ColorBlue, false)
+
 	// Shell script to set up NFS export
 	script := fmt.Sprintf(`
     echo '%[5]s[INFO]%[6]s Installing nfs-kernel-server if not already present'
-    if ! dpkg -s nfs-kernel-server >/dev/null 2>&1; then apt-get update && apt-get install -y nfs-kernel-server
+    if ! dpkg -s nfs-kernel-server >/dev/null 2>&1; then apt-get update && apt-get install -y nfs-kernel-server nfs-common 
     else echo '%[5]s[INFO]%[6]s nfs-kernel-server is already installed'; fi
 
     echo '%[5]s[INFO]%[6]s Creating export directory: %[1]s'

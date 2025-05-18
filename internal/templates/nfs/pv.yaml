@@ -8,7 +8,7 @@ spec:
   accessModes:
     - ReadWriteMany
   persistentVolumeReclaimPolicy: Retain
-  storageClassName: ""
+  storageClassName: "nfs-client"
   nfs:
     path: "{{NFS_EXPORT}}"
     server: "{{NFS_EXPORT}}"

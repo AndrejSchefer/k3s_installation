@@ -17,6 +17,9 @@ spec:
         app: ic-docker-registry
 
     spec:
+      # Ensure the kubelet runs mounts with correct group ownership
+      securityContext:
+        fsGroup: 1000                   # English comment: ensure container process can write to NFS volume
       volumes:
         - name: registry-config
           configMap:

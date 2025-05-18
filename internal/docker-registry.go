@@ -81,16 +81,13 @@ func InstallDockerRegistry() {
 			remotePath: "/tmp/docker-registry-namespace.yaml",
 		},*/
 		{
-			name:       "Deployment",
-			template:   "internal/templates/docker-registry/deployment.yaml",
-			remotePath: "docker-registry-deployment.yaml",
-			active:     !cfg.DockerRegistry.Local,
-		},
-		{
-			name:       "Deployment without tls",
-			template:   "internal/templates/docker-registry/deployment_without_tls.yaml",
-			remotePath: "deployment_without_tls.yaml",
-			active:     cfg.DockerRegistry.Local,
+			name:       "pvc-localhost",
+			template:   "internal/templates/docker-registry/pvc-localhost.yaml",
+			remotePath: "docker-registry-pvc-localhost.yaml",
+			vars: map[string]string{
+				"{{PVC_Storage_Capacity}}": cfg.DockerRegistry.PVCStorageCapacity,
+			},
+			active: true,
 		},
 		{
 			name:       "Config without tls",
@@ -132,18 +129,20 @@ func InstallDockerRegistry() {
 			active: !cfg.DockerRegistry.Local,
 		},
 		{
-			name:       "pvc-localhost",
-			template:   "internal/templates/docker-registry/pvc-localhost.yaml",
-			remotePath: "docker-registry-pvc-localhost.yaml",
-			vars: map[string]string{
-				"{{PVC_Storage_Capacity}}": cfg.DockerRegistry.PVCStorageCapacity,
-			},
-			active: true,
+			name:       "Deployment",
+			template:   "internal/templates/docker-registry/deployment.yaml",
+			remotePath: "docker-registry-deployment.yaml",
+			active:     !cfg.DockerRegistry.Local,
+		},
+		{
+			name:       "Deployment without tls",
+			template:   "internal/templates/docker-registry/deployment_without_tls.yaml",
+			remotePath: "deployment_without_tls.yaml",
+			active:     cfg.DockerRegistry.Local,
 		},
 	}
-	log.Println(steps)
 	for _, step := range steps {
-		utils.PrintSectionHeader(fmt.Sprintf("Applying %s", step.name), "[INFO]", utils.ColorBlue, false)
+		utils.PrintSectionHeader(fmt.Sprintf("Appdlying %s", step.name), "[INFO]", utils.ColorBlue, false)
 		if step.active {
 			if err := ApplyRemoteYAML(master.IP, master.SSHUser, master.SSHPass, step.template, step.remotePath, step.vars); err != nil {
 				log.Fatalf("%s step failed: %v", step.name, err)
