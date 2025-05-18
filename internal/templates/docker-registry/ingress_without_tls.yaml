@@ -18,6 +18,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: ic-docker-registry
+            name: ic-docker-registry-without-tls
             port:
               number: 5000
