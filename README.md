@@ -4,6 +4,8 @@ The project is written in **Go (Golang)** and provides a **modular, interactive 
 
 This tool enables users to **provision a complete K3s cluster** consisting of a **single master node and multiple worker nodes** across remote systems. It establishes **SSH connections** to the target hosts (either physical servers or virtual machines), where it executes installation routines, applies configurations, and starts necessary services. Authentication is handled via user/password or SSH key pairs, as defined in a declarative JSON-based configuration file.
 
+> For the installation you need at least three (two would also work) virtual machines or physical servers with Ubuntu server and root rights.
+
 The core functionality covers the entire cluster lifecycle:
 
 - **Master node initialization**: Installs K3s on the designated master host, configures secure networking interfaces, and generates the join token for worker registration.
