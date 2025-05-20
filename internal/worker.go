@@ -35,6 +35,8 @@ func InstallK3sWorker() error {
 	msg := fmt.Sprintf("K3s Token is loading successfully %s\n", cfg.K3sTokenFile)
 	utils.PrintSectionHeader(msg, "[INFO]", utils.ColorBlue, true)
 
+	k3sVersion := cfg.K3sVersion
+
 	for _, worker := range cfg.Workers {
 		user := worker.SSHUser
 		password := worker.SSHPass
@@ -47,8 +49,8 @@ func InstallK3sWorker() error {
 		installCmd := fmt.Sprintf(`
 		echo '%s' | sudo -S bash -c '
 		set -e
-		curl -sfL https://get.k3s.io | K3S_URL="https://%s:6443" K3S_TOKEN="%s" sh -s - agent
-		'`, password, cfg.Masters[0].IP, token)
+		curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="%s" \ K3S_URL="https://%s:6443" K3S_TOKEN="%s" sh -s - agent
+		'`, password, k3sVersion, cfg.Masters[0].IP, token)
 
 		if err := remote.RemoteExec(user, password, host, installCmd); err != nil {
 			return fmt.Errorf("Fehler bei der Installation auf Worker %s: %v", host, err)

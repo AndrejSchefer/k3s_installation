@@ -28,6 +28,7 @@ type DockerRegistry struct {
 
 // AppConfig represents the entire configuration
 type AppConfig struct {
+	K3sVersion        string         `json:"k3s_version"`
 	Masters           []NodeConfig   `json:"masters"`
 	Workers           []NodeConfig   `json:"workers"`
 	K3sTokenFile      string         `json:"k3s_token_file"`

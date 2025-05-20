@@ -7,6 +7,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/spf13/cobra"
+	"igneos.cloud/kubernetes/k3s-installer/config"
 	"igneos.cloud/kubernetes/k3s-installer/internal"
 )
 
@@ -46,6 +47,7 @@ func initialModel() model {
 			"Install Cert Manager",
 			"Install NFS Provisioner",
 			"Install Docker Registry",
+			"Install Monitoring With Prometheus and Grafana",
 			"Uninstall Kubernetes FULL Cluster",
 			"Exit",
 		},
@@ -81,11 +83,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
+
+	cfg, err := config.LoadConfig("config.json")
+	if err != nil {
+		fmt.Errorf("Fehler beim Laden der Konfiguration: %v", err)
+	}
+
 	s := titleStyle.Render(`
 	----------------------------------------------------------
 	IGNEOS.CLOUD K3s Cluster Installer (beta)
 	----------------------------------------------------------
 	`)
+	s += "\n Install K3s version: " + cfg.K3sVersion + "\n"
 	s += "\n  Use ↑ ↓ to move, ↵ to select\n\n"
 
 	for i, item := range m.items {
@@ -132,6 +141,8 @@ func handleChoice(choice string) {
 		internal.InstallNFSSubdirExternalProvisioner()
 	case "Install Docker Registry":
 		internal.InstallDockerRegistry()
+	case "Install Monitoring With Prometheus and Grafana":
+		internal.InstallMonitoring()
 	case "Uninstall Kubernetes FULL Cluster":
 		internal.UninstallK3sCluster()
 	case "Exit":

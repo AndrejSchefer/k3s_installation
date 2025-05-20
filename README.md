@@ -48,7 +48,8 @@ All operations are orchestrated based on a single declarative **`config.json`** 
   },
   "email": "",
   "domain": "",
-  "cluster_issuer_name": "letsencrypt-prod"
+  "cluster_issuer_name": "letsencrypt-prod",
+  "k3s_version": "v1.33.0+k3s1"
 }
 ```
 
