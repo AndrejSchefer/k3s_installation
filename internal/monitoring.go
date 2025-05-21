@@ -32,7 +32,7 @@ func createCRDs() error {
 
 	log.Printf("[OK] Registry Secret successfully created/updated in namespace %s on %s", namespace, master.IP)
 
-	// Schritt 1: Prometheus CRDs anwenden
+	// Step 1: Apply Prometheus CRDs
 	utils.PrintSectionHeader("Installing Prometheus CRDs", "[INFO]", utils.ColorBlue, false)
 
 	localCRDDir := "internal/templates/monitoring/" + cfg.K3sVersion + "/monitoring-crds-offline"
@@ -55,7 +55,7 @@ func createCRDs() error {
 		}
 	}
 
-	// Wartezeit, damit der API-Server die CRDs registriert
+	// Wait for CRDs to be registered by the API server
 	time.Sleep(10 * time.Second)
 	return nil
 }
@@ -68,7 +68,7 @@ func InstallMonitoring() {
 	createCRDs()
 	master := cfg.Masters[0]
 
-	// Schritt 2: Monitoring-Ressourcen anwenden
+	// Step 3: Apply monitoring resource templates
 	steps := []struct {
 		name       string
 		template   string
@@ -106,6 +106,18 @@ func InstallMonitoring() {
 			remotePath: "06-services.yaml",
 			active:     true,
 		},
+		{
+			name:       "ClusterRole (Grafana & Prometheus)",
+			template:   "internal/templates/monitoring/07-cluster-role.yaml",
+			remotePath: "07-cluster-role.yaml",
+			active:     true,
+		},
+		{
+			name:       "ClusterRoleBinding (Grafana & Prometheus)",
+			template:   "internal/templates/monitoring/08-cluster-role-binding.yaml",
+			remotePath: "08-cluster-role-binding.yaml",
+			active:     true,
+		},
 	}
 
 	for _, step := range steps {
@@ -117,5 +129,12 @@ func InstallMonitoring() {
 		}
 	}
 
+	// TODO: Add a check to see if the monitoring components are already installed
+	time.Sleep(20 * time.Second)
+	// Step 2: Patch ServiceAccount in the Deployment before applying monitoring components
+	patchCmd := fmt.Sprintf(`echo '%[1]s' | sudo -S kubectl patch deploy -n monitoring prometheus-operator --patch '{"spec": {"template": {"spec": {"serviceAccountName": "prometheus-operator"}}}}'`, master.SSHPass)
+	if err := remote.RemoteExec(master.SSHUser, master.SSHPass, master.IP, patchCmd); err != nil {
+		log.Fatalf("[ERROR] Failed to patch ServiceAccount in prometheus-operator deployment: %v", err)
+	}
 	utils.PrintSectionHeader("Monitoring stack successfully installed", "[SUCCESS]", utils.ColorGreen, false)
 }

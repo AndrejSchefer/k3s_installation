@@ -49,7 +49,7 @@ func InstallK3sWorker() error {
 		installCmd := fmt.Sprintf(`
 		echo '%s' | sudo -S bash -c '
 		set -e
-		curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="%s" \ K3S_URL="https://%s:6443" K3S_TOKEN="%s" sh -s - agent
+		curl -sfL https://get.k3s.io | INSTALL_K3S_VERSION="%s" K3S_URL="https://%s:6443" K3S_TOKEN="%s" sh -s - agent
 		'`, password, k3sVersion, cfg.Masters[0].IP, token)
 
 		if err := remote.RemoteExec(user, password, host, installCmd); err != nil {
