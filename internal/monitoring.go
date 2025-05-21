@@ -118,6 +118,12 @@ func InstallMonitoring() {
 			remotePath: "08-cluster-role-binding.yaml",
 			active:     true,
 		},
+		{
+			name:       "Ingress (Grafana)",
+			template:   "internal/templates/monitoring/09-grafana-ingress-local.yaml",
+			remotePath: "09-grafana-ingress-local.yaml",
+			active:     true,
+		},
 	}
 
 	for _, step := range steps {
