@@ -23,33 +23,41 @@ func Execute() {
 	cobra.CheckErr(rootCmd.Execute())
 }
 
+// ----- Menüeintrag -----
+type MenuItem struct {
+	Icon        string
+	Title       string
+	Description string
+}
+
 // ----- Styling -----
 var (
 	titleStyle    = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("69"))
 	cursorStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("212"))
 	selectedStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("205"))
+	descStyle     = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
 )
 
-// ----- Model -----
+// ----- Menümodell -----
 type model struct {
 	cursor int
 	choice string
-	items  []string
+	items  []MenuItem
 }
 
 func initialModel() model {
 	return model{
-		items: []string{
-			"Install Full K3s-Cluster",
-			"Install Kubernetes Master",
-			"Install Kubernetes Worker",
-			"Create a NFS mount on worker",
-			"Install Cert Manager",
-			"Install NFS Provisioner",
-			"Install Docker Registry",
-			"Install Monitoring With Prometheus and Grafana",
-			"Uninstall Kubernetes FULL Cluster",
-			"Exit",
+		items: []MenuItem{
+			{"🚀", "Install Full K3s-Cluster", "Installs Master, Worker, NFS, CertManager, Registry, and Monitoring stack"},
+			{"🧠", "Install Kubernetes Master", "Installs a K3s master node"},
+			{"👷", "Install Kubernetes Worker", "Adds a worker node to the cluster"},
+			{"📦", "Create a NFS mount on worker", "Mounts NFS storage on the worker node"},
+			{"🔒", "Install Cert Manager", "Installs cert-manager for TLS certificate management"},
+			{"🗂️", "Install NFS Provisioner", "Installs NFS Subdir External Provisioner for dynamic storage"},
+			{"📦", "Install Docker Registry", "Installs a private Docker registry"},
+			{"📊", "Install Monitoring With Prometheus and Grafana", "Installs Prometheus and Grafana for cluster monitoring"},
+			{"💣", "Uninstall Kubernetes FULL Cluster", "Completely removes all cluster components"},
+			{"🚪", "Exit", "Exit the application"},
 		},
 	}
 }
@@ -60,12 +68,10 @@ func (m model) Init() tea.Cmd {
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
-
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "ctrl+c", "q":
 			return m, tea.Quit
-
 		case "up", "k":
 			if m.cursor > 0 {
 				m.cursor--
@@ -75,7 +81,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor++
 			}
 		case "enter":
-			m.choice = m.items[m.cursor]
+			m.choice = m.items[m.cursor].Title
 			return m, tea.Quit
 		}
 	}
@@ -83,28 +89,46 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m model) View() string {
-
 	cfg, err := config.LoadConfig("config.json")
 	if err != nil {
-		fmt.Errorf("Fehler beim Laden der Konfiguration: %v", err)
+		fmt.Errorf("Error loading config: %v", err)
 	}
 
 	s := titleStyle.Render(`
-	----------------------------------------------------------
-	IGNEOS.CLOUD K3s Cluster Installer (beta)
-	----------------------------------------------------------
-	`)
+----------------------------------------------------------
+IGNEOS.CLOUD K3s Cluster Installer (beta)
+----------------------------------------------------------
+`)
 	s += "\n Install K3s version: " + cfg.K3sVersion + "\n"
-	s += "\n  Use ↑ ↓ to move, ↵ to select\n\n"
+	s += "\n Use ↑ ↓ to move, ↵ to select\n\n"
 
+	// Bestimme maximale Breite der Titel für Padding
+	maxTitleLen := 0
+	for _, item := range m.items {
+		length := len(item.Icon) + 1 + len(item.Title)
+		if length > maxTitleLen {
+			maxTitleLen = length
+		}
+	}
+
+	// Zeige alle Einträge formatiert an
 	for i, item := range m.items {
 		cursor := " "
-		style := lipgloss.NewStyle()
+		titleStyle := lipgloss.NewStyle()
 		if m.cursor == i {
 			cursor = "▶"
-			style = selectedStyle
+			titleStyle = selectedStyle
 		}
-		s += fmt.Sprintf("  %s %s\n", cursorStyle.Render(cursor), style.Render(item))
+		// Formatierter Titel mit Padding
+		title := fmt.Sprintf("%s %s", item.Icon, item.Title)
+		paddedTitle := fmt.Sprintf("%-*s", maxTitleLen, title)
+
+		s += fmt.Sprintf(
+			"  %s %s\n    %s\n\n",
+			cursorStyle.Render(cursor),
+			titleStyle.Render(paddedTitle),
+			descStyle.Render(item.Description),
+		)
 	}
 	return s
 }
