@@ -102,7 +102,6 @@ IGNEOS.CLOUD K3s Cluster Installer (beta)
 	s += "\n Install K3s version: " + cfg.K3sVersion + "\n"
 	s += "\n Use ↑ ↓ to move, ↵ to select\n\n"
 
-	// Bestimme maximale Breite der Titel für Padding
 	maxTitleLen := 0
 	for _, item := range m.items {
 		length := len(item.Icon) + 1 + len(item.Title)
@@ -111,7 +110,6 @@ IGNEOS.CLOUD K3s Cluster Installer (beta)
 		}
 	}
 
-	// Zeige alle Einträge formatiert an
 	for i, item := range m.items {
 		cursor := " "
 		titleStyle := lipgloss.NewStyle()
@@ -119,7 +117,6 @@ IGNEOS.CLOUD K3s Cluster Installer (beta)
 			cursor = "▶"
 			titleStyle = selectedStyle
 		}
-		// Formatierter Titel mit Padding
 		title := fmt.Sprintf("%s %s", item.Icon, item.Title)
 		paddedTitle := fmt.Sprintf("%-*s", maxTitleLen, title)
 
