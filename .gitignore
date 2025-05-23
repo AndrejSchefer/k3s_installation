@@ -4,3 +4,5 @@ config.json
 *.log
 master-node-token
 .htpasswd
+
+logs/

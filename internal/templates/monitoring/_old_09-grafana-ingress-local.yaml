@@ -1,15 +1,14 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: grafana-ingress
+  name: grafana-local
   namespace: monitoring
   annotations:
-    kubernetes.io/ingress.class: traefik # Use Traefik ingress controller
     traefik.ingress.kubernetes.io/router.entrypoints: web
-    # (Engl.) Above: Only expose on HTTP (web). For HTTPS in prod, use websecure.
+    traefik.ingress.kubernetes.io/router.rule: Host(`grafana.local`)
 spec:
   rules:
-    - host: grafana.local # Hostname for local access (add to /etc/hosts)
+    - host: grafana.local
       http:
         paths:
           - path: /
@@ -18,4 +17,4 @@ spec:
               service:
                 name: grafana
                 port:
-                  number: 3000
+                  number: 80 # <- Muss zu `port:` im Service passen (nicht targetPort!)

@@ -1,0 +1,515 @@
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"name":"grafana","namespace":"monitoring"},"spec":{"ports":[{"name":"http","port":80,"targetPort":"http"}],"selector":{"app":"grafana"},"type":"ClusterIP"}}
+    creationTimestamp: "2025-05-22T08:06:21Z"
+    name: grafana
+    namespace: monitoring
+    resourceVersion: "3914"
+    uid: 57adbcf1-d1a7-40dd-a9ab-a1adcd114071
+  spec:
+    clusterIP: 10.43.234.17
+    clusterIPs:
+    - 10.43.234.17
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - name: http
+      port: 80
+      protocol: TCP
+      targetPort: http
+    selector:
+      app: grafana
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"Service","metadata":{"annotations":{},"name":"prometheus","namespace":"monitoring"},"spec":{"ports":[{"port":9090,"targetPort":9090}],"selector":{"prometheus":"k3s-prometheus"},"type":"ClusterIP"}}
+    creationTimestamp: "2025-05-22T08:06:21Z"
+    name: prometheus
+    namespace: monitoring
+    resourceVersion: "3920"
+    uid: 581f946b-829d-4d8e-b0be-4ad01235f6a0
+  spec:
+    clusterIP: 10.43.9.10
+    clusterIPs:
+    - 10.43.9.10
+    internalTrafficPolicy: Cluster
+    ipFamilies:
+    - IPv4
+    ipFamilyPolicy: SingleStack
+    ports:
+    - port: 9090
+      protocol: TCP
+      targetPort: 9090
+    selector:
+      prometheus: k3s-prometheus
+    sessionAffinity: None
+    type: ClusterIP
+  status:
+    loadBalancer: {}
+- apiVersion: networking.k8s.io/v1
+  kind: Ingress
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"networking.k8s.io/v1","kind":"Ingress","metadata":{"annotations":{"traefik.ingress.kubernetes.io/router.entrypoints":"web"},"name":"grafana-local","namespace":"monitoring"},"spec":{"ingressClassName":"traefik","rules":[{"host":"grafana.local","http":{"paths":[{"backend":{"service":{"name":"grafana","port":{"name":"http"}}},"path":"/","pathType":"Prefix"}]}}]}}
+      traefik.ingress.kubernetes.io/router.entrypoints: web
+    creationTimestamp: "2025-05-22T08:06:22Z"
+    generation: 1
+    name: grafana-local
+    namespace: monitoring
+    resourceVersion: "8211"
+    uid: 04146d5b-82eb-464e-adfc-4443f4c33b2e
+  spec:
+    ingressClassName: traefik
+    rules:
+    - host: grafana.local
+      http:
+        paths:
+        - backend:
+            service:
+              name: grafana
+              port:
+                name: http
+          path: /
+          pathType: Prefix
+  status:
+    loadBalancer:
+      ingress:
+      - ip: 192.168.179.15
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    creationTimestamp: "2025-05-22T08:06:20Z"
+    generateName: grafana-6b488494f5-
+    generation: 1
+    labels:
+      app: grafana
+      pod-template-hash: 6b488494f5
+    name: grafana-6b488494f5-lzvkr
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ReplicaSet
+      name: grafana-6b488494f5
+      uid: 6a7cc773-1198-49f1-83d0-adfd504dc18e
+    resourceVersion: "4037"
+    uid: 45ab036e-eea4-4922-910a-ab4db6eecd6b
+  spec:
+    containers:
+    - image: grafana/grafana:10.2.0
+      imagePullPolicy: IfNotPresent
+      livenessProbe:
+        failureThreshold: 3
+        initialDelaySeconds: 30
+        periodSeconds: 10
+        successThreshold: 1
+        tcpSocket:
+          port: http
+        timeoutSeconds: 1
+      name: grafana
+      ports:
+      - containerPort: 3000
+        name: http
+        protocol: TCP
+      readinessProbe:
+        failureThreshold: 3
+        httpGet:
+          path: /robots.txt
+          port: http
+          scheme: HTTP
+        initialDelaySeconds: 10
+        periodSeconds: 30
+        successThreshold: 1
+        timeoutSeconds: 1
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 750Mi
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/lib/grafana
+        name: grafana-pv
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-xjjcn
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    nodeName: k3s-worker1
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    schedulerName: default-scheduler
+    securityContext:
+      fsGroup: 472
+      supplementalGroups:
+      - 0
+    serviceAccount: default
+    serviceAccountName: default
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - name: grafana-pv
+      persistentVolumeClaim:
+        claimName: grafana-pvc
+    - name: kube-api-access-xjjcn
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2025-05-22T08:06:39Z"
+      status: "True"
+      type: PodReadyToStartContainers
+    - lastProbeTime: null
+      lastTransitionTime: "2025-05-22T08:06:20Z"
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: "2025-05-22T08:07:11Z"
+      status: "True"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: "2025-05-22T08:07:11Z"
+      status: "True"
+      type: ContainersReady
+    - lastProbeTime: null
+      lastTransitionTime: "2025-05-22T08:06:20Z"
+      status: "True"
+      type: PodScheduled
+    containerStatuses:
+    - allocatedResources:
+        cpu: 250m
+        memory: 750Mi
+      containerID: containerd://f20bfb3850a15bf501ea93c53fe61e1b92814158b475dc4b1d62e672da353b0b
+      image: docker.io/grafana/grafana:10.2.0
+      imageID: docker.io/grafana/grafana@sha256:1ee0c54286b8ca09a3dd1419ff8653e7780a148a006ac088544203bb0affe550
+      lastState: {}
+      name: grafana
+      ready: true
+      resources:
+        limits:
+          cpu: 500m
+          memory: 1Gi
+        requests:
+          cpu: 250m
+          memory: 750Mi
+      restartCount: 0
+      started: true
+      state:
+        running:
+          startedAt: "2025-05-22T08:06:38Z"
+      user:
+        linux:
+          gid: 0
+          supplementalGroups:
+          - 0
+          - 472
+          uid: 472
+      volumeMounts:
+      - mountPath: /var/lib/grafana
+        name: grafana-pv
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-xjjcn
+        readOnly: true
+        recursiveReadOnly: Disabled
+    hostIP: 192.168.179.12
+    hostIPs:
+    - ip: 192.168.179.12
+    - ip: 2a02:8071:884:fc41:80a0:89ff:fe1b:92c2
+    phase: Running
+    podIP: 10.42.1.8
+    podIPs:
+    - ip: 10.42.1.8
+    qosClass: Burstable
+    startTime: "2025-05-22T08:06:20Z"
+- apiVersion: v1
+  kind: Pod
+  metadata:
+    creationTimestamp: "2025-05-22T08:06:42Z"
+    generateName: prometheus-operator-99f84864b-
+    generation: 1
+    labels:
+      name: prometheus-operator
+      pod-template-hash: 99f84864b
+    name: prometheus-operator-99f84864b-vkxq8
+    namespace: monitoring
+    ownerReferences:
+    - apiVersion: apps/v1
+      blockOwnerDeletion: true
+      controller: true
+      kind: ReplicaSet
+      name: prometheus-operator-99f84864b
+      uid: 27b7d596-a04d-4e81-98f4-068aec21d6cc
+    resourceVersion: "23762"
+    uid: 9cc45e99-9b7b-480a-afce-0e690a22382d
+  spec:
+    containers:
+    - args:
+      - --kubelet-service=kube-system/kubelet
+      - --log-level=info
+      image: quay.io/prometheus-operator/prometheus-operator:v0.70.0
+      imagePullPolicy: IfNotPresent
+      name: prometheus-operator
+      ports:
+      - containerPort: 8080
+        protocol: TCP
+      resources:
+        requests:
+          cpu: 100m
+          memory: 100Mi
+      terminationMessagePath: /dev/termination-log
+      terminationMessagePolicy: File
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-gllxb
+        readOnly: true
+    dnsPolicy: ClusterFirst
+    enableServiceLinks: true
+    nodeName: k3s-master1
+    preemptionPolicy: PreemptLowerPriority
+    priority: 0
+    restartPolicy: Always
+    schedulerName: default-scheduler
+    securityContext: {}
+    serviceAccount: prometheus-operator
+    serviceAccountName: prometheus-operator
+    terminationGracePeriodSeconds: 30
+    tolerations:
+    - effect: NoExecute
+      key: node.kubernetes.io/not-ready
+      operator: Exists
+      tolerationSeconds: 300
+    - effect: NoExecute
+      key: node.kubernetes.io/unreachable
+      operator: Exists
+      tolerationSeconds: 300
+    volumes:
+    - name: kube-api-access-gllxb
+      projected:
+        defaultMode: 420
+        sources:
+        - serviceAccountToken:
+            expirationSeconds: 3607
+            path: token
+        - configMap:
+            items:
+            - key: ca.crt
+              path: ca.crt
+            name: kube-root-ca.crt
+        - downwardAPI:
+            items:
+            - fieldRef:
+                apiVersion: v1
+                fieldPath: metadata.namespace
+              path: namespace
+  status:
+    conditions:
+    - lastProbeTime: null
+      lastTransitionTime: "2025-05-22T08:06:43Z"
+      status: "True"
+      type: PodReadyToStartContainers
+    - lastProbeTime: null
+      lastTransitionTime: "2025-05-22T08:06:42Z"
+      status: "True"
+      type: Initialized
+    - lastProbeTime: null
+      lastTransitionTime: "2025-05-22T13:26:48Z"
+      status: "True"
+      type: Ready
+    - lastProbeTime: null
+      lastTransitionTime: "2025-05-22T13:26:48Z"
+      status: "True"
+      type: ContainersReady
+    - lastProbeTime: null
+      lastTransitionTime: "2025-05-22T08:06:42Z"
+      status: "True"
+      type: PodScheduled
+    containerStatuses:
+    - allocatedResources:
+        cpu: 100m
+        memory: 100Mi
+      containerID: containerd://f59c0b1b861163290c111f276c8ce729d675eee80f2649ff71a57b4e3a52ec33
+      image: quay.io/prometheus-operator/prometheus-operator:v0.70.0
+      imageID: quay.io/prometheus-operator/prometheus-operator@sha256:5ce078d4cd5d0b39bbb2d323a7902eb05680276e25a041115db9128f61b451c8
+      lastState:
+        terminated:
+          containerID: containerd://9ed9156ebbe54fc91e11f6e470aef136849de45b44828a39e49de42bf5f8465a
+          exitCode: 1
+          finishedAt: "2025-05-22T13:26:46Z"
+          reason: Error
+          startedAt: "2025-05-22T13:16:46Z"
+      name: prometheus-operator
+      ready: true
+      resources:
+        requests:
+          cpu: 100m
+          memory: 100Mi
+      restartCount: 28
+      started: true
+      state:
+        running:
+          startedAt: "2025-05-22T13:26:47Z"
+      user:
+        linux:
+          gid: 65534
+          supplementalGroups:
+          - 65534
+          uid: 65534
+      volumeMounts:
+      - mountPath: /var/run/secrets/kubernetes.io/serviceaccount
+        name: kube-api-access-gllxb
+        readOnly: true
+        recursiveReadOnly: Disabled
+    hostIP: 192.168.179.13
+    hostIPs:
+    - ip: 192.168.179.13
+    - ip: 2a02:8071:884:fc41:94eb:efff:fe2d:2e6b
+    phase: Running
+    podIP: 10.42.0.11
+    podIPs:
+    - ip: 10.42.0.11
+    qosClass: Burstable
+    startTime: "2025-05-22T08:06:42Z"
+- apiVersion: v1
+  kind: PersistentVolume
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"PersistentVolume","metadata":{"annotations":{},"name":"pv-nfs-data"},"spec":{"accessModes":["ReadWriteMany"],"capacity":{"storage":"100Gi"},"nfs":{"path":"/mnt/k3s-nfs-localstorage","server":"/mnt/k3s-nfs-localstorage"},"persistentVolumeReclaimPolicy":"Retain","storageClassName":"nfs-client"}}
+      pv.kubernetes.io/bound-by-controller: "yes"
+    creationTimestamp: "2025-05-22T07:32:12Z"
+    finalizers:
+    - kubernetes.io/pv-protection
+    name: pv-nfs-data
+    resourceVersion: "1361"
+    uid: dc4fae30-896c-4757-9aef-c0dda92af504
+  spec:
+    accessModes:
+    - ReadWriteMany
+    capacity:
+      storage: 100Gi
+    claimRef:
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      name: igneos-cloud-registry-pvc
+      namespace: ic-docker-registry
+      resourceVersion: "1359"
+      uid: f9a2b1a6-20f9-477e-bafc-96674f3a565a
+    nfs:
+      path: /mnt/k3s-nfs-localstorage
+      server: /mnt/k3s-nfs-localstorage
+    persistentVolumeReclaimPolicy: Retain
+    storageClassName: nfs-client
+    volumeMode: Filesystem
+  status:
+    lastPhaseTransitionTime: "2025-05-22T07:34:33Z"
+    phase: Bound
+- apiVersion: v1
+  kind: PersistentVolume
+  metadata:
+    annotations:
+      pv.kubernetes.io/provisioned-by: k8s-sigs.io/nfs-subdir-external-provisioner
+    creationTimestamp: "2025-05-22T08:06:20Z"
+    finalizers:
+    - kubernetes.io/pv-protection
+    name: pvc-743184e0-f59e-43a7-be1f-939228331d41
+    resourceVersion: "3892"
+    uid: 65d1ba14-cf4c-4b23-9b69-c9494edbc13b
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    capacity:
+      storage: 1Gi
+    claimRef:
+      apiVersion: v1
+      kind: PersistentVolumeClaim
+      name: grafana-pvc
+      namespace: monitoring
+      resourceVersion: "3883"
+      uid: 743184e0-f59e-43a7-be1f-939228331d41
+    nfs:
+      path: /mnt/k3s-nfs-localstorage/monitoring/grafana-pvc
+      server: 192.168.179.12
+    persistentVolumeReclaimPolicy: Delete
+    storageClassName: nfs-client
+    volumeMode: Filesystem
+  status:
+    lastPhaseTransitionTime: "2025-05-22T08:06:20Z"
+    phase: Bound
+- apiVersion: v1
+  kind: PersistentVolumeClaim
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"v1","kind":"PersistentVolumeClaim","metadata":{"annotations":{},"name":"grafana-pvc","namespace":"monitoring"},"spec":{"accessModes":["ReadWriteOnce"],"resources":{"requests":{"storage":"1Gi"}},"storageClassName":"nfs-client"}}
+      pv.kubernetes.io/bind-completed: "yes"
+      pv.kubernetes.io/bound-by-controller: "yes"
+      volume.beta.kubernetes.io/storage-provisioner: k8s-sigs.io/nfs-subdir-external-provisioner
+      volume.kubernetes.io/storage-provisioner: k8s-sigs.io/nfs-subdir-external-provisioner
+    creationTimestamp: "2025-05-22T08:06:20Z"
+    finalizers:
+    - kubernetes.io/pvc-protection
+    name: grafana-pvc
+    namespace: monitoring
+    resourceVersion: "3900"
+    uid: 743184e0-f59e-43a7-be1f-939228331d41
+  spec:
+    accessModes:
+    - ReadWriteOnce
+    resources:
+      requests:
+        storage: 1Gi
+    storageClassName: nfs-client
+    volumeMode: Filesystem
+    volumeName: pvc-743184e0-f59e-43a7-be1f-939228331d41
+  status:
+    accessModes:
+    - ReadWriteOnce
+    capacity:
+      storage: 1Gi
+    phase: Bound
+kind: List
+metadata:
+  resourceVersion: ""
