@@ -136,10 +136,18 @@ func InstallDockerRegistry() {
 	for _, step := range steps {
 		if step.active {
 			utils.PrintSectionHeader(fmt.Sprintf("Applying %s", step.name), "[INFO]", utils.ColorBlue, false)
-			if err := ApplyRemoteYAML(master.IP, master.SSHUser, master.SSHPass, step.template, step.remotePath, step.vars); err != nil {
+			if err := utils.ApplyRemoteYAML(master.IP, master.SSHUser, master.SSHPass, step.template, step.remotePath, step.vars); err != nil {
 				log.Fatalf("[ERROR] Step '%s' failed: %v", step.name, err)
 			}
 		}
+	}
+
+	utils.PrintSectionHeader("Restarting docker-registry deployment",
+		"[INFO]", utils.ColorBlue, false)
+
+	if err := restartDeployment(master, "ic-docker-registry",
+		"ic-docker-registry-without-tls"); err != nil {
+		log.Fatalf("[ERROR] rollout restart failed: %v", err)
 	}
 
 	utils.PrintSectionHeader("Docker Registry successfully installed", "[SUCCESS]", utils.ColorGreen, false)

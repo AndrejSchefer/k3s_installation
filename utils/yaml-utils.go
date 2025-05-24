@@ -1,4 +1,4 @@
-package internal
+package utils
 
 import (
 	"fmt"
@@ -8,7 +8,6 @@ import (
 
 	"github.com/pkg/sftp"
 	"golang.org/x/crypto/ssh"
-	"igneos.cloud/kubernetes/k3s-installer/utils"
 )
 
 func ApplyRemoteYAML(host, user, password, localPath, remotePath string, replacements map[string]string) error {
@@ -75,6 +74,6 @@ func ApplyRemoteYAML(host, user, password, localPath, remotePath string, replace
 		return fmt.Errorf("failed to apply YAML remotely: %w", err)
 	}
 
-	utils.PrintSectionHeader("Applied YAML on master", "[SUCCESS]", utils.ColorGreen, false)
+	PrintSectionHeader("Applied YAML on master", "[SUCCESS]", ColorGreen, false)
 	return nil
 }

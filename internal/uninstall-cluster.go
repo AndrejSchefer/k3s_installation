@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"igneos.cloud/kubernetes/k3s-installer/config"
+	"igneos.cloud/kubernetes/k3s-installer/internal/nfs"
 	"igneos.cloud/kubernetes/k3s-installer/remote"
 	"igneos.cloud/kubernetes/k3s-installer/utils"
 )
@@ -48,7 +49,7 @@ func UninstallK3sCluster() error {
 	}
 
 	// Determine the NFS export directory from config
-	exportPath := cfg.NFS.Export
+	exportPath := cfg.NFS.NFSRootPath
 
 	for _, node := range append(cfg.Masters, cfg.Workers...) {
 		utils.PrintSectionHeader(fmt.Sprintf("[INFO] Uninstalling K3s on %s...\n", node.IP), "[INFO]", utils.ColorBlue, false)
@@ -77,7 +78,7 @@ echo "[INFO] K3s services completely removed on $(hostname)"
 `, exportPath, exportPath, exportPath, exportPath, exportPath)
 
 		// Construct the command to execute the script with sudo privileges
-		fullCommand := fmt.Sprintf("echo '%s' | sudo -S bash -c \"%s\"", node.SSHPass, escapeForDoubleQuotes(script))
+		fullCommand := fmt.Sprintf("echo '%s' | sudo -S bash -c \"%s\"", node.SSHPass, nfs.EscapeForDoubleQuotes(script))
 
 		// Execute the command on the remote host
 		if err := remote.RemoteExec(node.SSHUser, node.SSHPass, node.IP, fullCommand); err != nil {

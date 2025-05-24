@@ -1,10 +1,12 @@
+# internal/templates/nfs/nfs-storageclass.yaml
 apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
-  name: nfs-client
+  name: nfs-client # beliebiger Name, muss zu PVC passen
+  annotations:
+    storageclass.kubernetes.io/is-default-class: "true"
 provisioner: k8s-sigs.io/nfs-subdir-external-provisioner
 parameters:
-  pathPattern: "${.PVC.namespace}/${.PVC.name}"
-  onDelete: delete
-reclaimPolicy: Delete
-volumeBindingMode: Immediate
+  archiveOnDelete: "true" # english comment: keep data after PVC delete
+reclaimPolicy: Retain # Daten verbleiben auf NFS
+allowVolumeExpansion: true

@@ -1,0 +1,29 @@
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana
+  namespace: monitoring
+spec:
+  type: ClusterIP
+  selector:
+    app: grafana
+  ports:
+    - port: 3000 # Service port (match Grafana port)
+      targetPort: 3000 # Target port on pod
+      protocol: TCP
+      name: http
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: monitoring
+spec:
+  selector:
+    prometheus: k3s-prometheus
+  ports:
+    - port: 9090
+      targetPort: 9090
+  type: ClusterIP # reicht ebenfalls für Ingress

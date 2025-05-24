@@ -21,8 +21,9 @@ func InstallK3sMaster() error {
 	if err != nil {
 		log.Fatalf("Error loading configuration: %v", err)
 	}
-
+	k3sVersion := cfg.K3sVersion
 	utils.PrintSectionHeader("Installing K3s on master nodes...", "[INFO]", utils.ColorBlue, true)
+	utils.PrintSectionHeader(fmt.Sprintf("K3s Version: %s", k3sVersion), "[INFO]", utils.ColorBlue, false)
 
 	for _, master := range cfg.Masters {
 		user := master.SSHUser
@@ -30,29 +31,34 @@ func InstallK3sMaster() error {
 		ip := master.IP
 		tlsDomain := cfg.Domain
 
-		log.Printf("[STEP] Installing K3s on %s (%s@%s)\n", ip, user, ip)
+		log.Printf("[STEP] Installing K3s %s on %s (%s@%s)\n", k3sVersion, ip, user, ip)
 
-		// Remote installation script with proper IP substitution
 		cmd := fmt.Sprintf(`echo '%s' | sudo -S bash -c '
-		if ! command -v htpasswd >/dev/null 2>&1; then
-			apt-get update && \
-			apt-get install -y apache2-utils
-		fi && \
+if ! command -v htpasswd >/dev/null 2>&1; then
+  apt-get update && apt-get install -y apache2-utils
+fi
 
-		curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="--write-kubeconfig-mode=644 --secrets-encryption --tls-san=%s" sh -s - server &&
-		mkdir -p /home/%s/.kube &&
-		cp /etc/rancher/k3s/k3s.yaml /home/%s/.kube/config &&
-		chown %s:%s /home/%s/.kube/config &&
-		chmod 600 /home/%s/.kube/config &&
-		SERVER_IP=$(hostname -I | awk "{print \$1}") &&
-		sed -i "s/127\\.0\\.0\\.1/$SERVER_IP/" /home/%s/.kube/config
-		'`, pass, tlsDomain, user, user, user, user, user, user, user)
+curl -sfL https://get.k3s.io \
+  | INSTALL_K3S_VERSION="%s" \
+    INSTALL_K3S_EXEC="--write-kubeconfig-mode=644 --secrets-encryption --tls-san=%s" \
+    sh -s - server
+
+# Warte auf API-Server
+sleep 15
+
+mkdir -p /home/%[4]s/.kube
+cp /etc/rancher/k3s/k3s.yaml /home/%[4]s/.kube/config
+chown %[4]s:%[4]s /home/%[4]s/.kube/config
+chmod 600 /home/%[4]s/.kube/config
+SERVER_IP=$(hostname -I | awk "{print \\$1}")
+sed -i "s/127\\.0\\.0\\.1/$SERVER_IP/" /home/%[4]s/.kube/config
+'`, pass, k3sVersion, tlsDomain, user)
 
 		if err := remote.RemoteExec(user, pass, ip, cmd); err != nil {
 			return fmt.Errorf("failed to install K3s on %s: %w", ip, err)
 		}
 
-		utils.PrintSectionHeader(fmt.Sprintf("[SUCCESS] K3s installed successfully on %s\n", ip), "[SUCCESS]", utils.ColorGreen, false)
+		utils.PrintSectionHeader(fmt.Sprintf("[SUCCESS] K3s %s installed successfully on %s", k3sVersion, ip), "[SUCCESS]", utils.ColorGreen, false)
 	}
 
 	// Fetch the token and kubeconfig from the first master
