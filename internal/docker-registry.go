@@ -142,6 +142,14 @@ func InstallDockerRegistry() {
 		}
 	}
 
+	utils.PrintSectionHeader("Restarting docker-registry deployment",
+		"[INFO]", utils.ColorBlue, false)
+
+	if err := restartDeployment(master, "ic-docker-registry",
+		"ic-docker-registry-without-tls"); err != nil {
+		log.Fatalf("[ERROR] rollout restart failed: %v", err)
+	}
+
 	utils.PrintSectionHeader("Docker Registry successfully installed", "[SUCCESS]", utils.ColorGreen, false)
 
 	// Access info

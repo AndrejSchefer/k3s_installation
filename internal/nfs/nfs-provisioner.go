@@ -1,9 +1,11 @@
 package nfs
 
 import (
+	"fmt"
 	"log"
 
 	"igneos.cloud/kubernetes/k3s-installer/config"
+	"igneos.cloud/kubernetes/k3s-installer/remote"
 	"igneos.cloud/kubernetes/k3s-installer/utils"
 )
 
@@ -49,7 +51,7 @@ func InstallNFSSubdirExternalProvisioner() {
 			},
 		},
 
-		// PV für die Docker-Registry
+		/* PV für die Docker-Registry
 		{
 			name:       "PV for Docker Registry",
 			template:   "internal/templates/nfs/pv-nfs-docker-registry-data.yaml",
@@ -70,7 +72,7 @@ func InstallNFSSubdirExternalProvisioner() {
 				"{{NFS_EXPORT}}":   cfg.NFS.ExportGrafana,
 				"{{NFS_CAPACITY}}": cfg.NFS.Capacity,
 			},
-		},
+		},*/
 	}
 
 	for _, step := range steps {
@@ -82,8 +84,26 @@ func InstallNFSSubdirExternalProvisioner() {
 		}
 	}
 
+	if err := restartDeployment(master, "nfs-provisioner",
+		"nfs-client-provisioner"); err != nil {
+		log.Fatalf("[ERROR] rollout restart failed: %v", err)
+	}
+
 	log.Println("[SUCCESS] NFS Subdir External Provisioner successfully installed")
 	utils.PrintSectionHeader(
 		"NFS Subdir External Provisioner successfully installed", "[SUCCESS]", utils.ColorGreen, false,
 	)
+}
+
+func restartDeployment(node config.NodeConfig, namespace, deploy string) error {
+	cmd := fmt.Sprintf(`
+echo '%[1]s' | sudo -S bash -c '
+  echo "[INFO] Triggering rollout restart for %[2]s/%[3]s"
+  kubectl rollout restart deployment/%[3]s -n %[2]s || true
+
+  echo "[INFO] Deleting old pods (if stuck)..."
+  kubectl delete pod -n %[2]s -l app=ic-docker-registry --grace-period=0 --force || true
+'`, node.SSHPass, namespace, deploy)
+
+	return remote.RemoteExec(node.SSHUser, node.SSHPass, node.IP, cmd)
 }

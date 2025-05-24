@@ -5,8 +5,9 @@ metadata:
   namespace: monitoring
 spec:
   storageClassName: nfs-client
+  # volumeName: pv-nfs-docker-registry-data
   accessModes:
-    - ReadWriteOnce
+    - ReadWriteMany
   resources:
     requests:
       storage: 1Gi

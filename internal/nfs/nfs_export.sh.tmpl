@@ -1,4 +1,4 @@
-# english comment: install NFS packages if missing
+# install NFS packages if missing
 echo '{{.Blue}}[INFO]{{.Reset}} Checking for nfs-kernel-server'
 if ! dpkg -s nfs-kernel-server >/dev/null 2>&1; then
     apt-get update && apt-get install -y nfs-kernel-server nfs-common

@@ -136,7 +136,13 @@ func InstallMonitoring() {
 	}
 
 	// TODO: Add a check to see if the monitoring components are already installed
-	time.Sleep(20 * time.Second)
+	///	time.Sleep(20 * time.Second)
+
+	if err := restartDeployment(master, "monitoring",
+		"grafana"); err != nil {
+		log.Fatalf("[ERROR] rollout restart failed: %v", err)
+	}
+
 	// Step 2: Patch ServiceAccount in the Deployment before applying monitoring components
 	patchCmd := fmt.Sprintf(`echo '%[1]s' | sudo -S kubectl patch deploy -n monitoring prometheus-operator --patch '{"spec": {"template": {"spec": {"serviceAccountName": "prometheus-operator"}}}}'`, master.SSHPass)
 	if err := remote.RemoteExec(master.SSHUser, master.SSHPass, master.IP, patchCmd); err != nil {
