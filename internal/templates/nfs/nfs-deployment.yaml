@@ -30,9 +30,9 @@ spec:
             - name: NFS_SERVER
               value: "{{NFS_SERVER}}"
             - name: NFS_PATH
-              value: "{{NFS_EXPORT}}"
+              value: "{{NFS_ROOT_PATH}}" # ← nur ein *Root*-Pfad!
       volumes:
         - name: nfs-client-root
           nfs:
             server: "{{NFS_SERVER}}"
-            path: "{{NFS_EXPORT}}"
+            path: "{{NFS_ROOT_PATH}}"

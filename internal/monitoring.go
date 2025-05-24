@@ -50,7 +50,7 @@ func createCRDs() error {
 
 		utils.PrintSectionHeader(fmt.Sprintf("Applying CRD: %s", file.Name()), "[INFO]", utils.ColorBlue, false)
 
-		if err := ApplyRemoteYAML(master.IP, master.SSHUser, master.SSHPass, templatePath, remotePath, nil); err != nil {
+		if err := utils.ApplyRemoteYAML(master.IP, master.SSHUser, master.SSHPass, templatePath, remotePath, nil); err != nil {
 			log.Fatalf("[ERROR] Failed to apply CRD '%s': %v", file.Name(), err)
 		}
 	}
@@ -129,7 +129,7 @@ func InstallMonitoring() {
 	for _, step := range steps {
 		if step.active {
 			utils.PrintSectionHeader(fmt.Sprintf("Applying %s", step.name), "[INFO]", utils.ColorBlue, false)
-			if err := ApplyRemoteYAML(master.IP, master.SSHUser, master.SSHPass, step.template, step.remotePath, step.vars); err != nil {
+			if err := utils.ApplyRemoteYAML(master.IP, master.SSHUser, master.SSHPass, step.template, step.remotePath, step.vars); err != nil {
 				log.Fatalf("[ERROR] Step '%s' failed: %v", step.name, err)
 			}
 		}

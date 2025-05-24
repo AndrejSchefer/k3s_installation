@@ -5,6 +5,7 @@ metadata:
   namespace: ic-docker-registry
 spec:
   storageClassName: nfs-client
+  volumeName: pv-nfs-docker-registry-data
   accessModes:
     - ReadWriteMany
   resources:

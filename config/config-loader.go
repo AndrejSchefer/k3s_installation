@@ -82,12 +82,18 @@ func (c *AppConfig) Validate() error {
 	if c.NFS.NFS_User == "" {
 		return fmt.Errorf("nfs.nfs_user must not be empty")
 	}
-	if c.NFS.Export == "" {
+	if c.NFS.NFS_Pass == "" {
 		return fmt.Errorf("nfs.nfs_pass must not be empty")
 	}
-	if c.NFS.Export == "" {
-		return fmt.Errorf("nfs.export must not be empty")
+
+	if c.NFS.ExportDockerRegistry == "" {
+		return fmt.Errorf("nfs.export-docker-registry must not be empty")
 	}
+
+	if c.NFS.ExportGrafana == "" {
+		return fmt.Errorf("nfs.export-grafana must not be empty")
+	}
+
 	if c.NFS.Capacity == "" {
 		return fmt.Errorf("nfs.capacity must not be empty")
 	}

@@ -32,7 +32,7 @@ All operations are orchestrated based on a single declarative **`config.json`** 
   ],
   "docker_registry":{
     "url": "",                     # if local use registry.local:80
-    "pvc_storagy_capacity":"10Gi",
+    "pvc_storage_capacity":"10Gi",
     "pass": "123456",
     "user": "registry",
     "local": true

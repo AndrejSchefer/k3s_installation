@@ -21,7 +21,7 @@ func InstallCertManager() {
 		"Installing cert-manager and ClusterIssuer...", "[INFO]", utils.ColorBlue, true,
 	)
 
-	if err := ApplyRemoteYAML(
+	if err := utils.ApplyRemoteYAML(
 		master.IP,
 		master.SSHUser,
 		master.SSHPass,
@@ -50,7 +50,7 @@ func InstallCertManager() {
 		"{{CLUSTER_ISSUER_NAME}}": cfg.ClusterIssuerName,
 	}
 
-	if err := ApplyRemoteYAML(
+	if err := utils.ApplyRemoteYAML(
 		master.IP,
 		master.SSHUser,
 		master.SSHPass,

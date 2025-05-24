@@ -9,18 +9,20 @@ type NodeConfig struct {
 
 // NFSConfig represents NFS settings
 type NFSConfig struct {
-	NetworkCIDR string `json:"network_CIDR"`
-	NFS_Server  string `json:"nfs_server"`
-	NFS_User    string `json:"nfs_user"`
-	NFS_Pass    string `json:"nfs_pass"`
-	Server      string `json:"server"`
-	Export      string `json:"export"`
-	Capacity    string `json:"capacity"`
+	NetworkCIDR          string `json:"network_CIDR"`
+	NFS_Server           string `json:"nfs_server"`
+	NFS_User             string `json:"nfs_user"`
+	NFS_Pass             string `json:"nfs_pass"`
+	Server               string `json:"server"`
+	ExportDockerRegistry string `json:"export-docker-registry"`
+	ExportGrafana        string `json:"export-grafana"`
+	Capacity             string `json:"capacity"`
+	NFSRootPath          string `json:"nfs_root_path"`
 }
 
 type DockerRegistry struct {
 	URL                string `json:"url"`
-	PVCStorageCapacity string `json:"pvc_storagy_capacity"`
+	PVCStorageCapacity string `json:"pvc_storage_capacity"`
 	User               string `json:"user"`
 	Pass               string `json:"pass"`
 	Local              bool   `json:"local"`
